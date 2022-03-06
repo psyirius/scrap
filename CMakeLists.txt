@@ -30,6 +30,24 @@ add_library(${QJS_CORE_TARGET} STATIC ${QJS_CORE_HEADERS} ${QJS_CORE_SOURCES})
 
 target_include_directories(${QJS_CORE_TARGET} PUBLIC ${QJS_INCLUDE_DIR})
 
+target_compile_options(${QJS_CORE_TARGET} PRIVATE
+    -Os -s
+    -MMD -MF
+    -Wno-sign-compare
+    -Wno-missing-field-initializers
+    -Wunused -Wno-unused-parameter
+    -Wundef -Wuninitialized -Wwrite-strings
+    -Wchar-subscripts -funsigned-char
+)
+
+target_compile_definitions(${QJS_CORE_TARGET} PUBLIC
+    CONFIG_VERSION="${QJS_VERSION}"
+    CONFIG_BIGNUM
+    #    USE_WORKER  # needs fix for win32
+    _GNU_SOURCE
+    "$<IF:$<BOOL:${WIN32}>,__USE_MINGW_ANSI_STDIO,>"
+)
+
 # QuickJS Main. (for testing) (using MINGW-w64 v9.0 for now which has POSIX threads)
 set(QJS_EMBEDDED_TARGET qjx)
 set(LIB_WIN_PTHREAD_STATIC -static winpthread)
