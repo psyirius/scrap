@@ -30,6 +30,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <time.h>
+
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
 #elif defined(__linux__)
@@ -45,6 +46,7 @@
 #ifdef CONFIG_BIGNUM
 // calc.js compiled
 #include "lib/calc.h"
+
 static int bignum_ext;
 #endif
 
@@ -74,8 +76,7 @@ static int eval_buffer(JSContext *ctx, const void *buf, int buf_len, const char 
     return ret;
 }
 
-static int eval_file(JSContext *ctx, const char *filename, int module)
-{
+static int eval_file(JSContext *ctx, const char *filename, int module) {
     uint8_t *buf;
     int ret, eval_flags;
     size_t buf_len;
@@ -88,7 +89,7 @@ static int eval_file(JSContext *ctx, const char *filename, int module)
 
     if (module < 0) {
         module = (has_suffix(filename, ".mjs") ||
-                  JS_DetectModule((const char *)buf, buf_len));
+                  JS_DetectModule((const char *) buf, buf_len));
     }
     if (module)
         eval_flags = JS_EVAL_TYPE_MODULE;
@@ -100,8 +101,7 @@ static int eval_file(JSContext *ctx, const char *filename, int module)
 }
 
 /* also used to initialize the worker context */
-static JSContext *JS_NewCustomContext(JSRuntime *rt)
-{
+static JSContext *JS_NewCustomContext(JSRuntime *rt) {
     JSContext *ctx;
     ctx = JS_NewContext(rt);
     if (!ctx)
@@ -131,14 +131,12 @@ struct trace_malloc_data {
 };
 
 static inline unsigned long long js_trace_malloc_ptr_offset(uint8_t *ptr,
-                                                struct trace_malloc_data *dp)
-{
+                                                            struct trace_malloc_data *dp) {
     return ptr - dp->base;
 }
 
 /* default memory allocation functions with memory limitation */
-static inline size_t js_trace_malloc_usable_size(void *ptr)
-{
+static inline size_t js_trace_malloc_usable_size(void *ptr) {
 #if defined(__APPLE__)
     return malloc_size(ptr);
 #elif defined(_WIN32)
@@ -160,8 +158,7 @@ __attribute__((format(gnu_printf, 2, 3)))
 #else
 __attribute__((format(printf, 2, 3)))
 #endif
-    js_trace_malloc_printf(JSMallocState *s, const char *fmt, ...)
-{
+js_trace_malloc_printf(JSMallocState *s, const char *fmt, ...) {
     va_list ap;
     int c;
 
@@ -193,13 +190,11 @@ __attribute__((format(printf, 2, 3)))
     va_end(ap);
 }
 
-static void js_trace_malloc_init(struct trace_malloc_data *s)
-{
+static void js_trace_malloc_init(struct trace_malloc_data *s) {
     free(s->base = malloc(8));
 }
 
-static void *js_trace_malloc(JSMallocState *s, size_t size)
-{
+static void *js_trace_malloc(JSMallocState *s, size_t size) {
     void *ptr;
 
     /* Do not allocate zero bytes: behavior is platform dependent */
@@ -216,8 +211,7 @@ static void *js_trace_malloc(JSMallocState *s, size_t size)
     return ptr;
 }
 
-static void js_trace_free(JSMallocState *s, void *ptr)
-{
+static void js_trace_free(JSMallocState *s, void *ptr) {
     if (!ptr)
         return;
 
@@ -227,8 +221,7 @@ static void js_trace_free(JSMallocState *s, void *ptr)
     free(ptr);
 }
 
-static void *js_trace_realloc(JSMallocState *s, void *ptr, size_t size)
-{
+static void *js_trace_realloc(JSMallocState *s, void *ptr, size_t size) {
     size_t old_size;
 
     if (!ptr) {
@@ -258,27 +251,26 @@ static void *js_trace_realloc(JSMallocState *s, void *ptr, size_t size)
 }
 
 static const JSMallocFunctions trace_mf = {
-    js_trace_malloc,
-    js_trace_free,
-    js_trace_realloc,
+        js_trace_malloc,
+        js_trace_free,
+        js_trace_realloc,
 #if defined(__APPLE__)
-    malloc_size,
+        malloc_size,
 #elif defined(_WIN32)
-    (size_t (*)(const void *))_msize,
+        (size_t (*)(const void *)) _msize,
 #elif defined(EMSCRIPTEN)
-    NULL,
+        NULL,
 #elif defined(__linux__)
-    (size_t (*)(const void *))malloc_usable_size,
+        (size_t (*)(const void *))malloc_usable_size,
 #else
-    /* change this to `NULL,` if compilation fails */
-    malloc_usable_size,
+        /* change this to `NULL,` if compilation fails */
+        malloc_usable_size,
 #endif
 };
 
 #define PROG_NAME "qjs"
 
-void help(void)
-{
+void help(void) {
     printf("QuickJS version " CONFIG_VERSION "\n"
            "usage: " PROG_NAME " [options] [file [args]]\n"
            "-h  --help         list options\n"
@@ -288,10 +280,10 @@ void help(void)
            "    --script       load as ES6 script (default=autodetect)\n"
            "-I  --include file include an additional file\n"
            "    --std          make 'std' and 'os' available to the loaded script\n"
-#ifdef CONFIG_BIGNUM
+           #ifdef CONFIG_BIGNUM
            "    --bignum       enable the bignum extensions (BigFloat, BigDecimal)\n"
            "    --qjscalc      load the QJSCalc runtime (default if invoked as qjscalc)\n"
-#endif
+           #endif
            "-T  --trace        trace memory allocation\n"
            "-d  --dump         dump the memory usage stats\n"
            "    --memory-limit n       limit the memory usage to 'n' bytes\n"
@@ -301,11 +293,10 @@ void help(void)
     exit(1);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     JSRuntime *rt;
     JSContext *ctx;
-    struct trace_malloc_data trace_data = { NULL };
+    struct trace_malloc_data trace_data = {NULL};
     int optind;
     char *expr = NULL;
     int interactive = 0;
@@ -431,7 +422,7 @@ int main(int argc, char **argv)
                     fprintf(stderr, "expecting memory limit");
                     exit(1);
                 }
-                memory_limit = (size_t)strtod(argv[optind++], NULL);
+                memory_limit = (size_t) strtod(argv[optind++], NULL);
                 continue;
             }
             if (!strcmp(longopt, "stack-size")) {
@@ -439,7 +430,7 @@ int main(int argc, char **argv)
                     fprintf(stderr, "expecting stack size");
                     exit(1);
                 }
-                stack_size = (size_t)strtod(argv[optind++], NULL);
+                stack_size = (size_t) strtod(argv[optind++], NULL);
                 continue;
             }
             if (opt) {
@@ -497,13 +488,13 @@ int main(int argc, char **argv)
         /* make 'std' and 'os' visible to non module code */
         if (load_std) {
             const char *str = "import * as std from 'std';\n"
-                "import * as os from 'os';\n"
-                "globalThis.std = std;\n"
-                "globalThis.os = os;\n";
+                              "import * as os from 'os';\n"
+                              "globalThis.std = std;\n"
+                              "globalThis.os = os;\n";
             eval_buffer(ctx, str, strlen(str), "<input>", JS_EVAL_TYPE_MODULE);
         }
 
-        for(i = 0; i < include_count; i++) {
+        for (i = 0; i < include_count; i++) {
             if (eval_file(ctx, include_list[i], module))
                 goto fail;
         }
@@ -511,8 +502,7 @@ int main(int argc, char **argv)
         if (expr) {
             if (eval_buffer(ctx, expr, strlen(expr), "<cmdline>", 0))
                 goto fail;
-        } else
-        if (optind >= argc) {
+        } else if (optind >= argc) {
             /* interactive mode */
             interactive = 1;
         } else {
@@ -561,7 +551,7 @@ int main(int argc, char **argv)
                best[1], best[2], best[3], best[4]);
     }
     return 0;
- fail:
+    fail:
     js_std_free_handlers(rt);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);

@@ -11,7 +11,9 @@
 #include "lib/repl.h"
 
 #ifdef CONFIG_BIGNUM
+
 #include "lib/calc.h"
+
 #endif
 
 size_t cstr_len(const char *str) {
