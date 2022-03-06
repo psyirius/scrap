@@ -9,10 +9,12 @@ file(STRINGS "VERSION" QJS_VERSION)
 
 message("${PROJECT_NAME} v${QJS_VERSION}")
 
+set(QJS_LIB_DIR ${CMAKE_CURRENT_LIST_DIR}/lib)
 set(QJS_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
 set(QJS_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
+set(QJS_GENERATED_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
 
-file(GLOB QJS_CORE_HEADERS
+file(GLOB_RECURSE QJS_CORE_HEADERS
     ${QJS_SOURCE_DIR}/quickjs/*.h
     ${QJS_SOURCE_DIR}/quickjs/*.hpp
     ${QJS_INCLUDE_DIR}/quickjs/*.h
@@ -48,8 +50,40 @@ target_compile_definitions(${QJS_CORE_TARGET} PUBLIC
     "$<IF:$<BOOL:${WIN32}>,__USE_MINGW_ANSI_STDIO,>"
 )
 
-# QuickJS Main. (for testing) (using MINGW-w64 v9.0 for now which has POSIX threads)
-set(QJS_EMBEDDED_TARGET qjx)
-set(LIB_WIN_PTHREAD_STATIC -static winpthread)
-add_executable(${QJS_EMBEDDED_TARGET} ${QJS_SOURCE_DIR} ${QJS_SOURCE_DIR}/main.c)
-target_link_libraries(${QJS_EMBEDDED_TARGET} PRIVATE ${QJS_CORE_TARGET} ${LIB_WIN_PTHREAD_STATIC})
+if (UNIX)
+    target_link_libraries(${QJS_CORE_TARGET} PRIVATE m dl pthread)
+else()
+    set(LIB_WIN_PTHREAD_STATIC -static winpthread)
+    target_link_libraries(${QJS_CORE_TARGET} PRIVATE ${LIB_WIN_PTHREAD_STATIC})
+endif()
+
+# QuickJS compiler.
+set(QJS_COMPILER_TARGET qjsc)
+add_executable(${QJS_COMPILER_TARGET} ${QJS_SOURCE_DIR}/qjsc.c)
+target_link_libraries(${QJS_COMPILER_TARGET} PRIVATE ${QJS_CORE_TARGET})
+
+set(QJSC_GENERATED_DIR ${QJS_GENERATED_DIR}/qjsc)
+
+add_custom_command(
+    OUTPUT ${QJSC_GENERATED_DIR}/repl.c ${QJSC_GENERATED_DIR}/calc.c
+    # Compile repl.js into repl.c
+    COMMAND qjsc -c -o ${QJSC_GENERATED_DIR}/repl.c -m ${QJS_LIB_DIR}/repl.js
+    # Compile calc.js into calc.c
+    COMMAND qjsc -c -o ${QJSC_GENERATED_DIR}/calc.c -m ${QJS_LIB_DIR}/calc.js
+    DEPENDS ${QJS_COMPILER_TARGET}
+)
+
+set(QJSC_GENERATED_SOURCES
+    ${QJSC_GENERATED_DIR}/repl.c
+    ${QJSC_GENERATED_DIR}/calc.c
+)
+
+# QuickJS interpreter.
+set(QJS_INTERPRETER_TARGET qjs)
+add_executable(${QJS_INTERPRETER_TARGET} ${QJS_SOURCE_DIR}/qjs.c ${QJSC_GENERATED_SOURCES})
+target_link_libraries(${QJS_INTERPRETER_TARGET} PRIVATE ${QJS_CORE_TARGET})
+
+# QuickJS Embedded. (TestExample)
+set(QJS_EMBEDDED_TARGET qjse)
+add_executable(${QJS_EMBEDDED_TARGET} ${QJS_SOURCE_DIR}/qjse.c ${QJSC_GENERATED_SOURCES})
+target_link_libraries(${QJS_EMBEDDED_TARGET} PRIVATE ${QJS_CORE_TARGET})

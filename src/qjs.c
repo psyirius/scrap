@@ -28,9 +28,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <assert.h>
-#include <unistd.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <time.h>
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
@@ -38,20 +36,19 @@
 #include <malloc.h>
 #endif
 
-#include "cutils.h"
-#include "quickjs-libc.h"
+#include "quickjs/cutils.h"
+#include "quickjs/quickjs-libc.h"
 
-extern const uint8_t qjsc_repl[]; // in repl.c (bytecode stub generated at compile-time using qjsc from repl.js)
-extern const uint32_t qjsc_repl_size;
+// repl.js compiled
+#include "lib/repl.h"
+
 #ifdef CONFIG_BIGNUM
-extern const uint8_t qjsc_qjscalc[]; // in qjscalc.c (bytecode stub generated at compile-time using qjsc from qjscalc.js)
-extern const uint32_t qjsc_qjscalc_size;
+// calc.js compiled
+#include "lib/calc.h"
 static int bignum_ext;
 #endif
 
-static int eval_buf(JSContext *ctx, const void *buf, int buf_len,
-                    const char *filename, int eval_flags)
-{
+static int eval_buffer(JSContext *ctx, const void *buf, int buf_len, const char *filename, int eval_flags) {
     JSValue val;
     int ret;
 
@@ -97,7 +94,7 @@ static int eval_file(JSContext *ctx, const char *filename, int module)
         eval_flags = JS_EVAL_TYPE_MODULE;
     else
         eval_flags = JS_EVAL_TYPE_GLOBAL;
-    ret = eval_buf(ctx, buf, buf_len, filename, eval_flags);
+    ret = eval_buffer(ctx, buf, buf_len, filename, eval_flags);
     js_free(ctx, buf);
     return ret;
 }
@@ -492,7 +489,7 @@ int main(int argc, char **argv)
     if (!empty_run) {
 #ifdef CONFIG_BIGNUM
         if (load_jscalc) {
-            js_std_eval_binary(ctx, qjsc_qjscalc, qjsc_qjscalc_size, 0);
+            js_std_eval_binary(ctx, qjsc_calc, qjsc_calc_size, 0);
         }
 #endif
         js_std_add_helpers(ctx, argc - optind, argv + optind);
@@ -503,7 +500,7 @@ int main(int argc, char **argv)
                 "import * as os from 'os';\n"
                 "globalThis.std = std;\n"
                 "globalThis.os = os;\n";
-            eval_buf(ctx, str, strlen(str), "<input>", JS_EVAL_TYPE_MODULE);
+            eval_buffer(ctx, str, strlen(str), "<input>", JS_EVAL_TYPE_MODULE);
         }
 
         for(i = 0; i < include_count; i++) {
@@ -512,7 +509,7 @@ int main(int argc, char **argv)
         }
 
         if (expr) {
-            if (eval_buf(ctx, expr, strlen(expr), "<cmdline>", 0))
+            if (eval_buffer(ctx, expr, strlen(expr), "<cmdline>", 0))
                 goto fail;
         } else
         if (optind >= argc) {
