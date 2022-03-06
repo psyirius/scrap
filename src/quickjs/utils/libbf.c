@@ -32,8 +32,8 @@
 #include <immintrin.h>
 #endif
 
-#include "quickjs/cutils.h"
-#include "quickjs/libbf.h"
+#include "quickjs/utils/cutils.h"
+#include "quickjs/utils/libbf.h"
 
 /* enable it to check the multiplication result */
 //#define USE_MUL_CHECK

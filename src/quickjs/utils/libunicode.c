@@ -27,9 +27,9 @@
 #include <string.h>
 #include <assert.h>
 
-#include "quickjs/cutils.h"
-#include "quickjs/libunicode.h"
-#include "quickjs/libunicode-table.h"
+#include "quickjs/utils/cutils.h"
+#include "quickjs/utils/libunicode.h"
+#include "quickjs/utils/libunicode-table.h"
 
 enum {
     RUN_TYPE_U,

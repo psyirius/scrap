@@ -32,6 +32,7 @@
 #include <time.h>
 #include <fenv.h>
 #include <math.h>
+
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
 #elif defined(__linux__)
@@ -40,12 +41,14 @@
 #include <malloc_np.h>
 #endif
 
-#include "quickjs/cutils.h"
-#include "quickjs/list.h"
 #include "quickjs/quickjs.h"
-#include "quickjs/libregexp.h"
+
+#include "quickjs/utils/cutils.h"
+#include "quickjs/utils/list.h"
+#include "quickjs/utils/libregexp.h"
+
 #ifdef CONFIG_BIGNUM
-#include "quickjs/libbf.h"
+#include "quickjs/utils/libbf.h"
 #endif
 
 #define OPTIMIZE         1

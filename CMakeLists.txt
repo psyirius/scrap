@@ -43,7 +43,8 @@ target_compile_options(${QJS_CORE_TARGET} PRIVATE
 target_compile_definitions(${QJS_CORE_TARGET} PUBLIC
     CONFIG_VERSION="${QJS_VERSION}"
     CONFIG_BIGNUM
-    #    USE_WORKER  # needs fix for win32
+#    CONFIG_ATOMICS # needs fix
+#    USE_WORKER  # needs fix for win32
     _GNU_SOURCE
     "$<IF:$<BOOL:${WIN32}>,__USE_MINGW_ANSI_STDIO,>"
 )

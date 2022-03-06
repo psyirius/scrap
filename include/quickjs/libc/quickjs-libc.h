@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "quickjs.h"
+#include <quickjs/quickjs.h>
 
 #ifdef __cplusplus
 extern "C" {
