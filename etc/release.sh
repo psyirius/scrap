@@ -133,7 +133,7 @@ mkdir -p $outdir $outdir/doc $outdir/tests $outdir/examples
 
 cp Makefile VERSION TODO Changelog readme.txt LICENSE \
    release.sh unicode_download.sh \
-   qjs.c qjsc.c qjscalc.js repl.js \
+   qjs.c qjsc.c calc.js repl.js \
    quickjs.c quickjs.h quickjs-atom.h \
    quickjs-libc.c quickjs-libc.h quickjs-opcode.h \
    cutils.c cutils.h list.h \
