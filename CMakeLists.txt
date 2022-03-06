@@ -15,8 +15,6 @@ set(QJS_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
 set(QJS_GENERATED_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
 
 file(GLOB_RECURSE QJS_CORE_HEADERS
-    ${QJS_SOURCE_DIR}/quickjs/*.h
-    ${QJS_SOURCE_DIR}/quickjs/*.hpp
     ${QJS_INCLUDE_DIR}/quickjs/*.h
     ${QJS_INCLUDE_DIR}/quickjs/*.hpp
 )
