@@ -1,26 +1,5 @@
 /*
  * QuickJS opcode definitions
- * 
- * Copyright (c) 2017-2018 Fabrice Bellard
- * Copyright (c) 2017-2018 Charlie Gordon
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
  */
 
 #ifdef FMT
@@ -165,14 +144,14 @@ DEF(        set_loc, 3, 1, 1, loc) /* must come after put_loc */
 DEF(        get_arg, 3, 0, 1, arg)
 DEF(        put_arg, 3, 1, 0, arg) /* must come after get_arg */
 DEF(        set_arg, 3, 1, 1, arg) /* must come after put_arg */
-DEF(    get_var_ref, 3, 0, 1, var_ref) 
+DEF(    get_var_ref, 3, 0, 1, var_ref)
 DEF(    put_var_ref, 3, 1, 0, var_ref) /* must come after get_var_ref */
 DEF(    set_var_ref, 3, 1, 1, var_ref) /* must come after put_var_ref */
 DEF(set_loc_uninitialized, 3, 0, 0, loc)
 DEF(  get_loc_check, 3, 0, 1, loc)
 DEF(  put_loc_check, 3, 1, 0, loc) /* must come after get_loc_check */
 DEF(  put_loc_check_init, 3, 1, 0, loc)
-DEF(get_var_ref_check, 3, 0, 1, var_ref) 
+DEF(get_var_ref_check, 3, 0, 1, var_ref)
 DEF(put_var_ref_check, 3, 1, 0, var_ref) /* must come after get_var_ref_check */
 DEF(put_var_ref_check_init, 3, 1, 0, var_ref)
 DEF(      close_loc, 3, 0, 0, loc)
@@ -261,7 +240,7 @@ DEF(      mul_pow10, 1, 2, 1, none)
 DEF(       math_mod, 1, 2, 1, none)
 #endif
 /* must be the last non short and non temporary opcode */
-DEF(            nop, 1, 0, 0, none) 
+DEF(            nop, 1, 0, 0, none)
 
 /* temporary opcodes: never emitted in the final bytecode */
 
@@ -282,7 +261,7 @@ def(scope_get_private_field2, 7, 1, 2, atom_u16) /* obj -> obj value, emitted in
 def(scope_put_private_field, 7, 1, 1, atom_u16) /* obj value ->, emitted in phase 1, removed in phase 2 */
 
 def( set_class_name, 5, 1, 1, u32) /* emitted in phase 1, removed in phase 2 */
-    
+
 def(       line_num, 5, 0, 0, u32) /* emitted in phase 1, removed in phase 3 */
 
 #if SHORT_OPCODES

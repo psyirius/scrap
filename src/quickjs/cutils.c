@@ -1,6 +1,6 @@
 /*
  * C utilities
- * 
+ *
  * Copyright (c) 2017 Fabrice Bellard
  * Copyright (c) 2018 Charlie Gordon
  *
@@ -27,7 +27,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "cutils.h"
+#include "quickjs/cutils.h"
 
 void pstrcpy(char *buf, int buf_size, const char *str)
 {
@@ -172,7 +172,7 @@ int __attribute__((format(printf, 2, 3))) dbuf_printf(DynBuf *s,
     va_list ap;
     char buf[128];
     int len;
-    
+
     va_start(ap, fmt);
     len = vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);

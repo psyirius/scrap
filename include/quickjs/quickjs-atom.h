@@ -1,26 +1,5 @@
 /*
  * QuickJS atom definitions
- * 
- * Copyright (c) 2017-2018 Fabrice Bellard
- * Copyright (c) 2017-2018 Charlie Gordon
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
  */
 
 #ifdef DEF
@@ -202,7 +181,7 @@ DEF(RegExp, "RegExp")
 DEF(ArrayBuffer, "ArrayBuffer")
 DEF(SharedArrayBuffer, "SharedArrayBuffer")
 /* must keep same order as class IDs for typed arrays */
-DEF(Uint8ClampedArray, "Uint8ClampedArray") 
+DEF(Uint8ClampedArray, "Uint8ClampedArray")
 DEF(Int8Array, "Int8Array")
 DEF(Uint8Array, "Uint8Array")
 DEF(Int16Array, "Int16Array")
@@ -269,5 +248,5 @@ DEF(Symbol_asyncIterator, "Symbol.asyncIterator")
 #ifdef CONFIG_BIGNUM
 DEF(Symbol_operatorSet, "Symbol.operatorSet")
 #endif
-    
+
 #endif /* DEF */
