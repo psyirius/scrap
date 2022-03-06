@@ -41,10 +41,10 @@
 #include "cutils.h"
 #include "quickjs-libc.h"
 
-extern const uint8_t qjsc_repl[];
+extern const uint8_t qjsc_repl[]; // in repl.c (bytecode stub generated at compile-time using qjsc from repl.js)
 extern const uint32_t qjsc_repl_size;
 #ifdef CONFIG_BIGNUM
-extern const uint8_t qjsc_qjscalc[];
+extern const uint8_t qjsc_qjscalc[]; // in qjscalc.c (bytecode stub generated at compile-time using qjsc from qjscalc.js)
 extern const uint32_t qjsc_qjscalc_size;
 static int bignum_ext;
 #endif
