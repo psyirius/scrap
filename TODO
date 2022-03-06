@@ -1,5 +1,6 @@
 X-TODO:
 - Ensure cross-platform compat.
+- Centralize platform-specific code.
 - Merge fixes.
 - Split units.
 - Expose C and C++ apis.
