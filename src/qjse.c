@@ -7,24 +7,14 @@
 
 #include "quickjs/quickjs.h"
 #include "quickjs/libc/quickjs-libc.h"
+#include "quickjs/utils/cstring.h"
 
+// Compiled Js
 #include "lib/repl.h"
 
 #ifdef CONFIG_BIGNUM
-
 #include "lib/calc.h"
-
 #endif
-
-size_t cstr_len(const char *str) {
-    size_t len = 0;
-
-    while (str[len]) {
-        len++;
-    }
-
-    return len;
-}
 
 /* Also used to initialize the worker context */
 static JSContext *JS_NewCustomContext(JSRuntime *rt) {
@@ -55,13 +45,13 @@ static int js_eval_string(JSContext *ctx, const char *js_src, const char *filena
 
     if ((eval_flags & JS_EVAL_TYPE_MASK) == JS_EVAL_TYPE_MODULE) {
         /* for the modules, we compile then run to be able to set import.meta */
-        val = JS_Eval(ctx, js_src, cstr_len(js_src), filename, eval_flags | JS_EVAL_FLAG_COMPILE_ONLY);
+        val = JS_Eval(ctx, js_src, CString.length(js_src), filename, eval_flags | JS_EVAL_FLAG_COMPILE_ONLY);
         if (!JS_IsException(val)) {
             js_module_set_import_meta(ctx, val, true, true);
             val = JS_EvalFunction(ctx, val);
         }
     } else {
-        val = JS_Eval(ctx, js_src, cstr_len(js_src), filename, eval_flags);
+        val = JS_Eval(ctx, js_src, CString.length(js_src), filename, eval_flags);
     }
     if (JS_IsException(val)) {
         js_std_dump_error(ctx);

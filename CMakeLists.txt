@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.20)
 project(QuickJS)
 
 set(CMAKE_C_STANDARD        17)
@@ -12,7 +12,11 @@ message("${PROJECT_NAME} v${QJS_VERSION}")
 set(QJS_LIB_DIR ${CMAKE_CURRENT_LIST_DIR}/lib)
 set(QJS_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
 set(QJS_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
+
 set(QJS_GENERATED_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
+
+set(QJS_TESTS_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/tests)
+set(QJS_TEST262_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/tests/test262)
 
 file(GLOB_RECURSE QJS_CORE_HEADERS
     ${QJS_INCLUDE_DIR}/quickjs/*.h
@@ -43,8 +47,7 @@ target_compile_options(${QJS_CORE_TARGET} PRIVATE
 target_compile_definitions(${QJS_CORE_TARGET} PUBLIC
     CONFIG_VERSION="${QJS_VERSION}"
     CONFIG_BIGNUM
-#    CONFIG_ATOMICS # needs fix
-#    USE_WORKER  # needs fix for win32
+    USE_WORKER  # win32 needs fixes
     _GNU_SOURCE
     "$<IF:$<BOOL:${WIN32}>,__USE_MINGW_ANSI_STDIO,>"
 )
@@ -86,3 +89,13 @@ target_link_libraries(${QJS_INTERPRETER_TARGET} PRIVATE ${QJS_CORE_TARGET})
 set(QJS_EMBEDDED_TARGET qjse)
 add_executable(${QJS_EMBEDDED_TARGET} ${QJS_SOURCE_DIR}/qjse.c ${QJSC_GENERATED_SOURCES})
 target_link_libraries(${QJS_EMBEDDED_TARGET} PRIVATE ${QJS_CORE_TARGET})
+
+# QuickJS Simple Test.
+set(QJS_TEST_TARGET qjs_test)
+add_executable(${QJS_TEST_TARGET} ${QJS_TESTS_SOURCE_DIR}/test.c)
+target_link_libraries(${QJS_TEST_TARGET} PRIVATE ${QJS_CORE_TARGET})
+
+# QuickJS ECMA Test 262 Runner.
+set(QJS_ECMA_TEST262_RUNNER_TARGET qjs_test262)
+add_executable(${QJS_ECMA_TEST262_RUNNER_TARGET} ${QJS_TEST262_SOURCE_DIR}/run-test262.c)
+target_link_libraries(${QJS_ECMA_TEST262_RUNNER_TARGET} PRIVATE ${QJS_CORE_TARGET})
