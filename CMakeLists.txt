@@ -49,7 +49,7 @@ target_compile_options(${QJS_CORE_TARGET} PRIVATE
 target_compile_definitions(${QJS_CORE_TARGET} PUBLIC
     CONFIG_VERSION="${QJS_VERSION}"
     CONFIG_BIGNUM
-    USE_WORKER  # win32 needs fixes
+#    USE_WORKER  # win32 needs fixes
     _GNU_SOURCE
     "$<IF:$<BOOL:${WIN32}>,__USE_MINGW_ANSI_STDIO,>"
 )
@@ -99,10 +99,38 @@ target_link_libraries(${QJS_ECMA_TEST262_RUNNER_TARGET} PRIVATE ${QJS_CORE_TARGE
 
 # QuickJS BSON (Test).
 set(QJS_TEST_BJSON_TARGET qjs_test_bjson)
-add_executable(${QJS_TEST_BJSON_TARGET} ${QJS_TESTS_SOURCE_DIR}/bjson.c)
+add_library(${QJS_TEST_BJSON_TARGET} SHARED ${QJS_TESTS_SOURCE_DIR}/bjson.c)
 target_link_libraries(${QJS_TEST_BJSON_TARGET} PRIVATE ${QJS_CORE_TARGET})
 
 # QuickJS Experimental (Test).
 set(QJS_TEST_EXP_TARGET qjs_test_exp)
 add_executable(${QJS_TEST_EXP_TARGET} ${QJS_TEST_EXP_SOURCE_DIR}/test.c)
 target_link_libraries(${QJS_TEST_EXP_TARGET} PRIVATE ${QJS_CORE_TARGET})
+
+# tests
+enable_testing()
+
+# test
+
+set(QJS_TEST_TARGET qjs_test)
+add_custom_target(${QJS_TEST_TARGET}
+    COMMENT "Running test..."
+
+    WORKING_DIRECTORY ${QJS_TESTS_SOURCE_DIR}
+
+    COMMAND ${QJS_INTERPRETER_TARGET} test_closure.js
+    COMMAND ${QJS_INTERPRETER_TARGET} test_language.js
+    COMMAND ${QJS_INTERPRETER_TARGET} test_builtin.js
+    COMMAND ${QJS_INTERPRETER_TARGET} test_loop.js
+    COMMAND ${QJS_INTERPRETER_TARGET} test_std.js
+#    COMMAND ${QJS_INTERPRETER_TARGET} test_worker.js
+
+    DEPENDS ${QJS_TEST_BJSON_TARGET}
+)
+add_dependencies(${QJS_TEST_TARGET} ${QJS_INTERPRETER_TARGET})
+
+add_test(
+    NAME ${QJS_TEST_TARGET}
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${QJS_TEST_TARGET}
+)
+

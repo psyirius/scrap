@@ -2,7 +2,7 @@ import * as std from "std";
 import * as os from "os";
 
 function assert(actual, expected, message) {
-    if (arguments.length == 1)
+    if (arguments.length === 1)
         expected = true;
 
     if (actual === expected)
@@ -92,9 +92,8 @@ function test_getline()
     line_count = 0;
     for(;;) {
         line = f.getline();
-        if (line === null)
-            break;
-        assert(line == lines[line_count]);
+        if (line === null) break;
+        assert(line === lines[line_count]);
         line_count++;
     }
     assert(f.eof());
@@ -103,8 +102,7 @@ function test_getline()
     f.close();
 }
  
-function test_popen()
-{
+function test_popen() {
     var str, f, fname = "tmp_file.txt";
     var content = "hello world";
 
@@ -114,9 +112,11 @@ function test_popen()
 
     /* test loadFile */
     assert(std.loadFile(fname), content);
+
+    var cat = (os.platform === 'win32' ? 'type' : 'cat') + ' ';
     
     /* execute the 'cat' shell command */
-    f = std.popen("cat " + fname, "r");
+    f = std.popen(cat + fname, "r");
     str = f.readAsString();
     f.close();
 
@@ -125,8 +125,7 @@ function test_popen()
     os.remove(fname);
 }
 
-function test_ext_json()
-{
+function test_ext_json() {
     var expected, input, obj;
     expected = '{"x":false,"y":true,"z2":null,"a":[1,8,160],"s":"str"}';
     input = `{ "x":false, /*comments are allowed */
@@ -139,8 +138,7 @@ function test_ext_json()
     assert(JSON.stringify(obj), expected);
 }
 
-function test_os()
-{
+function test_os() {
     var fd, fpath, fname, fdir, buf, buf2, i, files, err, fdate, st, link_path;
 
     assert(os.isatty(0));
@@ -170,12 +168,12 @@ function test_os()
     assert(os.read(fd, buf2.buffer, 0, buf2.length) === buf2.length);
     
     for(i = 0; i < buf.length; i++)
-        assert(buf[i] == buf2[i]);
+        assert(buf[i] === buf2[i]);
     
     if (typeof BigInt !== "undefined") {
         assert(os.seek(fd, BigInt(6), std.SEEK_SET), BigInt(6));
         assert(os.read(fd, buf2.buffer, 0, 1) === 1);
-        assert(buf[6] == buf2[0]);
+        assert(buf[6] === buf2[0]);
     }
     
     assert(os.close(fd) === 0);
@@ -194,18 +192,21 @@ function test_os()
     assert(st.mode & os.S_IFMT, os.S_IFREG);
     assert(st.mtime, fdate);
 
-    err = os.symlink(fname, link_path);
-    assert(err === 0);
-    
-    [st, err] = os.lstat(link_path);
-    assert(err, 0);
-    assert(st.mode & os.S_IFMT, os.S_IFLNK);
+    // TODO: add these for win32
+    if (os.platform !== 'win32') {
+        err = os.symlink(fname, link_path);
+        assert(err === 0);
 
-    [buf, err] = os.readlink(link_path);
-    assert(err, 0);
-    assert(buf, fname);
-    
-    assert(os.remove(link_path) === 0);
+        [st, err] = os.lstat(link_path);
+        assert(err, 0);
+        assert(st.mode & os.S_IFMT, os.S_IFLNK);
+
+        [buf, err] = os.readlink(link_path);
+        assert(err, 0);
+        assert(buf, fname);
+
+        assert(os.remove(link_path) === 0);
+    }
 
     [buf, err] = os.getcwd();
     assert(err, 0);
@@ -227,39 +228,41 @@ function test_os_exec()
 {
     var ret, fds, pid, f, status;
 
-    ret = os.exec(["true"]);
-    assert(ret, 0);
+    // TODO: add these for win32
+    if (os.platform !== 'win32') {
+        ret = os.exec(["true"]);
+        assert(ret, 0);
 
-    ret = os.exec(["/bin/sh", "-c", "exit 1"], { usePath: false });
-    assert(ret, 1);
-    
-    fds = os.pipe();
-    pid = os.exec(["sh", "-c", "echo $FOO"], {
-        stdout: fds[1],
-        block: false,
-        env: { FOO: "hello" },
-    } );
-    assert(pid >= 0);
-    os.close(fds[1]); /* close the write end (as it is only in the child)  */
-    f = std.fdopen(fds[0], "r");
-    assert(f.getline(), "hello");
-    assert(f.getline(), null);
-    f.close();
-    [ret, status] = os.waitpid(pid, 0);
-    assert(ret, pid);
-    assert(status & 0x7f, 0); /* exited */
-    assert(status >> 8, 0); /* exit code */
+        ret = os.exec(["/bin/sh", "-c", "exit 1"], { usePath: false });
+        assert(ret, 1);
 
-    pid = os.exec(["cat"], { block: false } );
-    assert(pid >= 0);
-    os.kill(pid, os.SIGQUIT);
-    [ret, status] = os.waitpid(pid, 0);
-    assert(ret, pid);
-    assert(status & 0x7f, os.SIGQUIT);
+        fds = os.pipe();
+        pid = os.exec(["sh", "-c", "echo $FOO"], {
+            stdout: fds[1],
+            block: false,
+            env: { FOO: "hello" },
+        } );
+        assert(pid >= 0);
+        os.close(fds[1]); /* close the write end (as it is only in the child)  */
+        f = std.fdopen(fds[0], "r");
+        assert(f.getline(), "hello");
+        assert(f.getline(), null);
+        f.close();
+        [ret, status] = os.waitpid(pid, 0);
+        assert(ret, pid);
+        assert(status & 0x7f, 0); /* exited */
+        assert(status >> 8, 0); /* exit code */
+
+        pid = os.exec(["cat"], { block: false } );
+        assert(pid >= 0);
+        os.kill(pid, os.SIGQUIT);
+        [ret, status] = os.waitpid(pid, 0);
+        assert(ret, pid);
+        assert(status & 0x7f, os.SIGQUIT);
+    }
 }
 
-function test_timer()
-{
+function test_timer() {
     var th, i;
 
     /* just test that a timer can be inserted and removed */

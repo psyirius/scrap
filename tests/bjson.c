@@ -1,8 +1,8 @@
 /*
  * QuickJS: binary JSON module (test only)
  */
-#include "quickjs/libc//quickjs-libc.h"
-#include "quickjs/utils//cutils.h"
+#include "quickjs/libc/quickjs-libc.h"
+#include "quickjs/utils/cutils.h"
 
 static JSValue js_bjson_read(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     uint8_t *buf;

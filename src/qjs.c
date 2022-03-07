@@ -1,27 +1,7 @@
 /*
  * QuickJS stand alone interpreter
- *
- * Copyright (c) 2017-2021 Fabrice Bellard
- * Copyright (c) 2017-2021 Charlie Gordon
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
  */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -95,7 +75,7 @@ static int eval_file(JSContext *ctx, const char *filename, int module) {
         eval_flags = JS_EVAL_TYPE_MODULE;
     else
         eval_flags = JS_EVAL_TYPE_GLOBAL;
-    ret = eval_buffer(ctx, buf, buf_len, filename, eval_flags);
+    ret = eval_buffer(ctx, buf, (int) buf_len, filename, eval_flags);
     js_free(ctx, buf);
     return ret;
 }
@@ -160,7 +140,7 @@ __attribute__((format(printf, 2, 3)))
 #endif
 js_trace_malloc_printf(JSMallocState *s, const char *fmt, ...) {
     va_list ap;
-    int c;
+    char c;
 
     va_start(ap, fmt);
     while ((c = *fmt++) != '\0') {
@@ -171,9 +151,11 @@ js_trace_malloc_printf(JSMallocState *s, const char *fmt, ...) {
                 if (ptr == NULL) {
                     printf("NULL");
                 } else {
-                    printf("H%+06lld.%zd",
-                           js_trace_malloc_ptr_offset(ptr, s->opaque),
-                           js_trace_malloc_usable_size(ptr));
+                    printf(
+                        "H%+06lld.%zd",
+                        js_trace_malloc_ptr_offset(ptr, s->opaque),
+                        js_trace_malloc_usable_size(ptr)
+                    );
                 }
                 fmt++;
                 continue;
