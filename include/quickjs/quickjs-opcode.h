@@ -1,6 +1,6 @@
 /*
  * QuickJS opcode definitions
- */
+*/
 
 #ifdef FMT
 FMT(none)
@@ -36,12 +36,11 @@ FMT(label_u16)
 #endif /* FMT */
 
 #ifdef DEF
-
 #ifndef def
 #define def(id, size, n_pop, n_push, f) DEF(id, size, n_pop, n_push, f)
 #endif
 
-DEF(invalid, 1, 0, 0, none) /* never emitted */
+DEF(        invalid, 1, 0, 0, none) /* never emitted */
 
 /* push values */
 DEF(       push_i32, 5, 0, 1, i32)
@@ -111,12 +110,12 @@ DEF( put_var_strict, 5, 2, 0, atom) /* for strict mode variable write */
 DEF(  get_ref_value, 1, 2, 3, none)
 DEF(  put_ref_value, 1, 3, 0, none)
 
-DEF(     define_var, 6, 0, 0, atom_u8)
+DEF(      define_var, 6, 0, 0, atom_u8)
 DEF(check_define_var, 6, 0, 0, atom_u8)
-DEF(    define_func, 6, 1, 0, atom_u8)
-DEF(      get_field, 5, 1, 1, atom)
-DEF(     get_field2, 5, 1, 2, atom)
-DEF(      put_field, 5, 2, 0, atom)
+DEF(     define_func, 6, 1, 0, atom_u8)
+DEF(       get_field, 5, 1, 1, atom)
+DEF(      get_field2, 5, 1, 2, atom)
+DEF(       put_field, 5, 2, 0, atom)
 DEF( get_private_field, 1, 2, 1, none) /* obj prop -> value */
 DEF( put_private_field, 1, 3, 0, none) /* obj value prop -> */
 DEF(define_private_field, 1, 3, 1, none) /* obj prop value -> obj */
@@ -235,10 +234,12 @@ DEF(            and, 1, 2, 1, none)
 DEF(            xor, 1, 2, 1, none)
 DEF(             or, 1, 2, 1, none)
 DEF(is_undefined_or_null, 1, 1, 1, none)
+
 #ifdef CONFIG_BIGNUM
 DEF(      mul_pow10, 1, 2, 1, none)
 DEF(       math_mod, 1, 2, 1, none)
 #endif
+
 /* must be the last non short and non temporary opcode */
 DEF(            nop, 1, 0, 0, none)
 
@@ -333,8 +334,8 @@ DEF(          call1, 1, 1, 1, npopx)
 DEF(          call2, 1, 1, 1, npopx)
 DEF(          call3, 1, 1, 1, npopx)
 
-DEF(   is_undefined, 1, 1, 1, none)
-DEF(        is_null, 1, 1, 1, none)
+DEF(       is_undefined, 1, 1, 1, none)
+DEF(            is_null, 1, 1, 1, none)
 DEF(typeof_is_undefined, 1, 1, 1, none)
 DEF( typeof_is_function, 1, 1, 1, none)
 #endif

@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD        17)
 set(CMAKE_CXX_STANDARD      17)
 set(CMAKE_VERBOSE_MAKEFILE  on)
 
-file(STRINGS "VERSION" QJS_VERSION)
+file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/VERSION" QJS_VERSION)
 
 message("${PROJECT_NAME} v${QJS_VERSION}")
 
@@ -111,26 +111,185 @@ target_link_libraries(${QJS_TEST_EXP_TARGET} PRIVATE ${QJS_CORE_TARGET})
 enable_testing()
 
 # test
-
 set(QJS_TEST_TARGET qjs_test)
-add_custom_target(${QJS_TEST_TARGET}
+add_custom_target(
+    ${QJS_TEST_TARGET}
+
     COMMENT "Running test..."
 
     WORKING_DIRECTORY ${QJS_TESTS_SOURCE_DIR}
 
+    COMMAND echo Running: test_closure.js
     COMMAND ${QJS_INTERPRETER_TARGET} test_closure.js
+
+    COMMAND echo Running: test_language.js
     COMMAND ${QJS_INTERPRETER_TARGET} test_language.js
+
+    COMMAND echo Running: test_builtin.js
     COMMAND ${QJS_INTERPRETER_TARGET} test_builtin.js
+
+    COMMAND echo Running: test_loop.js
     COMMAND ${QJS_INTERPRETER_TARGET} test_loop.js
+
+    COMMAND echo Running: test_std.js
     COMMAND ${QJS_INTERPRETER_TARGET} test_std.js
-#    COMMAND ${QJS_INTERPRETER_TARGET} test_worker.js
 
-    DEPENDS ${QJS_TEST_BJSON_TARGET}
+    COMMAND echo Running: test_worker.js
+    COMMAND ${QJS_INTERPRETER_TARGET} test_worker.js
+
+    DEPENDS ${QJS_INTERPRETER_TARGET}
 )
-add_dependencies(${QJS_TEST_TARGET} ${QJS_INTERPRETER_TARGET})
-
 add_test(
     NAME ${QJS_TEST_TARGET}
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${QJS_TEST_TARGET}
 )
 
+# stats
+set(QJS_STATS_TARGET qjs_stats)
+add_custom_target(${QJS_STATS_TARGET}
+    COMMENT "Running stats..."
+
+    WORKING_DIRECTORY ${QJS_TESTS_SOURCE_DIR}
+
+    COMMAND ${QJS_INTERPRETER_TARGET} -qd
+
+    DEPENDS ${QJS_INTERPRETER_TARGET}
+)
+add_test(
+    NAME ${QJS_STATS_TARGET}
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${QJS_STATS_TARGET}
+)
+
+# microbench
+set(QJS_MICROBENCH_TARGET qjs_microbench)
+add_custom_target(${QJS_MICROBENCH_TARGET}
+    COMMENT "Running microbench..."
+
+    WORKING_DIRECTORY ${QJS_TESTS_SOURCE_DIR}
+
+    COMMAND ${QJS_INTERPRETER_TARGET} microbench.js
+
+    DEPENDS ${QJS_INTERPRETER_TARGET}
+)
+add_test(
+    NAME ${QJS_MICROBENCH_TARGET}
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${QJS_MICROBENCH_TARGET}
+)
+
+# ES5 tests (obsolete)
+set(TEST262O_CONF_FILE ${QJS_TEST262_SOURCE_DIR}/test262o.conf)
+
+# test2o
+set(QJS_TEST2O_TARGET qjs_test2o)
+add_custom_target(${QJS_TEST2O_TARGET}
+    COMMENT "Running test2o..."
+
+    WORKING_DIRECTORY ${QJS_TEST262_SOURCE_DIR}
+
+    COMMAND ${QJS_ECMA_TEST262_RUNNER_TARGET} -m -c ${TEST262O_CONF_FILE}
+
+    DEPENDS ${QJS_ECMA_TEST262_RUNNER_TARGET}
+)
+add_test(
+    NAME ${QJS_TEST2O_TARGET}
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${QJS_TEST2O_TARGET}
+)
+
+# test2o-update
+set(QJS_TEST2O_UPDATE_TARGET qjs_test2o-update)
+add_custom_target(${QJS_TEST2O_UPDATE_TARGET}
+    COMMENT "Running test2o-update..."
+
+    WORKING_DIRECTORY ${QJS_TEST262_SOURCE_DIR}
+
+    COMMAND ${QJS_ECMA_TEST262_RUNNER_TARGET} -u -c ${TEST262O_CONF_FILE}
+
+    DEPENDS ${QJS_ECMA_TEST262_RUNNER_TARGET}
+)
+add_test(
+    NAME ${QJS_TEST2O_UPDATE_TARGET}
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${QJS_TEST2O_UPDATE_TARGET}
+)
+
+# Test262 tests
+set(TEST262_CONF_FILE ${QJS_TEST262_SOURCE_DIR}/test262.conf)
+
+# test2-default
+set(QJS_TEST2_DEFAULT_TARGET qjs_test2-default)
+add_custom_target(${QJS_TEST2_DEFAULT_TARGET}
+    COMMENT "Running test2-default..."
+
+    WORKING_DIRECTORY ${QJS_TEST262_SOURCE_DIR}
+
+    COMMAND ${QJS_ECMA_TEST262_RUNNER_TARGET} -m -c ${TEST262_CONF_FILE}
+
+    DEPENDS ${QJS_ECMA_TEST262_RUNNER_TARGET}
+)
+add_test(
+    NAME ${QJS_TEST2_DEFAULT_TARGET}
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${QJS_TEST2_DEFAULT_TARGET}
+)
+
+# test2
+set(QJS_TEST2_TARGET qjs_test2)
+add_custom_target(${QJS_TEST2_TARGET}
+    COMMENT "Running test2..."
+
+    WORKING_DIRECTORY ${QJS_TEST262_SOURCE_DIR}
+
+    COMMAND ${QJS_ECMA_TEST262_RUNNER_TARGET} -m -c ${TEST262_CONF_FILE} -a
+
+    DEPENDS ${QJS_ECMA_TEST262_RUNNER_TARGET}
+)
+add_test(
+    NAME ${QJS_TEST2_TARGET}
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${QJS_TEST2_TARGET}
+)
+
+# test2-update
+set(QJS_TEST2_UPDATE_TARGET qjs_test2-update)
+add_custom_target(${QJS_TEST2_UPDATE_TARGET}
+    COMMENT "Running test2-update..."
+
+    WORKING_DIRECTORY ${QJS_TEST262_SOURCE_DIR}
+
+    COMMAND ${QJS_ECMA_TEST262_RUNNER_TARGET} -u -c ${TEST262_CONF_FILE} -a
+
+    DEPENDS ${QJS_ECMA_TEST262_RUNNER_TARGET}
+)
+add_test(
+    NAME ${QJS_TEST2_UPDATE_TARGET}
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${QJS_TEST2_UPDATE_TARGET}
+)
+
+# test2-check
+set(QJS_TEST2_CHECK_TARGET qjs_test2-check)
+add_custom_target(${QJS_TEST2_CHECK_TARGET}
+    COMMENT "Running test2-check..."
+
+    WORKING_DIRECTORY ${QJS_TEST262_SOURCE_DIR}
+
+    COMMAND ${QJS_ECMA_TEST262_RUNNER_TARGET} -m -c ${TEST262_CONF_FILE} -E -a
+
+    DEPENDS ${QJS_ECMA_TEST262_RUNNER_TARGET}
+)
+add_test(
+    NAME ${QJS_TEST2_CHECK_TARGET}
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${QJS_TEST2_CHECK_TARGET}
+)
+
+# testall
+set(QJS_TESTALL_TARGET qjs_testall)
+add_custom_target(${QJS_TESTALL_TARGET}
+    COMMENT "Running testall..."
+
+    WORKING_DIRECTORY ${QJS_TESTS_SOURCE_DIR}
+
+    COMMAND echo "Running all tests..."
+
+    DEPENDS ${QJS_MICROBENCH_TARGET} ${QJS_TEST2O_TARGET} ${QJS_TEST2_TARGET}
+)
+add_test(
+    NAME ${QJS_TESTALL_TARGET}
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${QJS_TESTALL_TARGET}
+)

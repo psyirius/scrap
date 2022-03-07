@@ -1854,10 +1854,10 @@ char *get_opt_arg(const char *option, char *arg) {
 }
 
 int main(int argc, char **argv) {
-    int optind, start_index, stop_index;
+    int opt_i, start_index, stop_index;
     BOOL is_dir_list;
     BOOL only_check_errors = FALSE;
-    const char *filename;
+    const char* filename;
     BOOL is_test262_harness = FALSE;
     BOOL is_module = FALSE;
 
@@ -1866,15 +1866,14 @@ int main(int argc, char **argv) {
     setenv("TZ", "America/Los_Angeles", 1);
 #endif
 
-    /* cannot use getopt because we want to pass the command line to
-       the script */
-    optind = 1;
+    /* cannot use getopt because we want to pass the command line to the script */
+    opt_i = 1;
     is_dir_list = TRUE;
-    while (optind < argc) {
-        char *arg = argv[optind];
+    while (opt_i < argc) {
+        char *arg = argv[opt_i];
         if (*arg != '-')
             break;
-        optind++;
+        opt_i++;
         if (str_equal(arg, "-h")) {
             help();
         } else if (str_equal(arg, "-m")) {
@@ -1890,21 +1889,21 @@ int main(int argc, char **argv) {
         } else if (str_equal(arg, "-v")) {
             verbose++;
         } else if (str_equal(arg, "-c")) {
-            load_config(get_opt_arg(arg, argv[optind++]));
+            load_config(get_opt_arg(arg, argv[opt_i++]));
         } else if (str_equal(arg, "-d")) {
-            enumerate_tests(get_opt_arg(arg, argv[optind++]));
+            enumerate_tests(get_opt_arg(arg, argv[opt_i++]));
         } else if (str_equal(arg, "-e")) {
-            error_filename = get_opt_arg(arg, argv[optind++]);
+            error_filename = get_opt_arg(arg, argv[opt_i++]);
         } else if (str_equal(arg, "-x")) {
-            namelist_load(&exclude_list, get_opt_arg(arg, argv[optind++]));
+            namelist_load(&exclude_list, get_opt_arg(arg, argv[opt_i++]));
         } else if (str_equal(arg, "-f")) {
             is_dir_list = FALSE;
         } else if (str_equal(arg, "-r")) {
-            report_filename = get_opt_arg(arg, argv[optind++]);
+            report_filename = get_opt_arg(arg, argv[opt_i++]);
         } else if (str_equal(arg, "-E")) {
             only_check_errors = TRUE;
         } else if (str_equal(arg, "-T")) {
-            slow_test_threshold = atoi(get_opt_arg(arg, argv[optind++]));
+            slow_test_threshold = atoi(get_opt_arg(arg, argv[opt_i++]));
         } else if (str_equal(arg, "-N")) {
             is_test262_harness = TRUE;
         } else if (str_equal(arg, "--module")) {
@@ -1915,11 +1914,11 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (optind >= argc && !test_list.count)
+    if (opt_i >= argc && !test_list.count)
         help();
 
     if (is_test262_harness) {
-        return run_test262_harness_test(argv[optind], is_module);
+        return run_test262_harness_test(argv[opt_i], is_module);
     }
 
     error_out = stdout;
@@ -1942,16 +1941,16 @@ int main(int argc, char **argv) {
     update_exclude_dirs();
 
     if (is_dir_list) {
-        if (optind < argc && !isdigit(argv[optind][0])) {
-            filename = argv[optind++];
+        if (opt_i < argc && !isdigit(argv[opt_i][0])) {
+            filename = argv[opt_i++];
             namelist_load(&test_list, filename);
         }
         start_index = 0;
         stop_index = -1;
-        if (optind < argc) {
-            start_index = atoi(argv[optind++]);
-            if (optind < argc) {
-                stop_index = atoi(argv[optind++]);
+        if (opt_i < argc) {
+            start_index = atoi(argv[opt_i++]);
+            if (opt_i < argc) {
+                stop_index = atoi(argv[opt_i++]);
             }
         }
         if (!report_filename || str_equal(report_filename, "none")) {
@@ -1972,14 +1971,14 @@ int main(int argc, char **argv) {
         }
     } else {
         outfile = stdout;
-        while (optind < argc) {
-            run_test(argv[optind++], -1);
+        while (opt_i < argc) {
+            run_test(argv[opt_i++], -1);
         }
     }
 
     if (dump_memory) {
         if (dump_memory > 1 && stats_count > 1) {
-            printf("\nMininum memory statistics for %s:\n\n", stats_min_filename);
+            printf("\nMinimum memory statistics for %s:\n\n", stats_min_filename);
             JS_DumpMemoryUsage(stdout, &stats_min, NULL);
             printf("\nMaximum memory statistics for %s:\n\n", stats_max_filename);
             JS_DumpMemoryUsage(stdout, &stats_max, NULL);

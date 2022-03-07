@@ -1,6 +1,10 @@
 /* A cpp like namespaced functions interface */
 #pragma once
 
+#ifdef __cplusplus
+#error "Only for C!"
+#endif
+
 #include <stdint.h>
 
 #define REF_METHOD(type_name, method) \
