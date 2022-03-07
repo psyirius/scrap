@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\ctypi.h"
+#include "ctypi.h"
 
 // Macros
 #define DEF_Cast_METHOD(method, return_type, ...) \

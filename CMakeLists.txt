@@ -16,7 +16,9 @@ set(QJS_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
 set(QJS_GENERATED_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
 
 set(QJS_TESTS_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/tests)
-set(QJS_TEST262_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/tests/test262)
+
+set(QJS_TEST262_SOURCE_DIR ${QJS_TESTS_SOURCE_DIR}/test262)
+set(QJS_TEST_EXP_SOURCE_DIR ${QJS_TESTS_SOURCE_DIR}/experimental)
 
 file(GLOB_RECURSE QJS_CORE_HEADERS
     ${QJS_INCLUDE_DIR}/quickjs/*.h
@@ -90,12 +92,17 @@ set(QJS_EMBEDDED_TARGET qjse)
 add_executable(${QJS_EMBEDDED_TARGET} ${QJS_SOURCE_DIR}/qjse.c ${QJSC_GENERATED_SOURCES})
 target_link_libraries(${QJS_EMBEDDED_TARGET} PRIVATE ${QJS_CORE_TARGET})
 
-# QuickJS Simple Test.
-set(QJS_TEST_TARGET qjs_test)
-add_executable(${QJS_TEST_TARGET} ${QJS_TESTS_SOURCE_DIR}/test.c)
-target_link_libraries(${QJS_TEST_TARGET} PRIVATE ${QJS_CORE_TARGET})
-
 # QuickJS ECMA Test 262 Runner.
 set(QJS_ECMA_TEST262_RUNNER_TARGET qjs_test262)
 add_executable(${QJS_ECMA_TEST262_RUNNER_TARGET} ${QJS_TEST262_SOURCE_DIR}/run-test262.c)
 target_link_libraries(${QJS_ECMA_TEST262_RUNNER_TARGET} PRIVATE ${QJS_CORE_TARGET})
+
+# QuickJS BSON (Test).
+set(QJS_TEST_BJSON_TARGET qjs_test_bjson)
+add_executable(${QJS_TEST_BJSON_TARGET} ${QJS_TESTS_SOURCE_DIR}/bjson.c)
+target_link_libraries(${QJS_TEST_BJSON_TARGET} PRIVATE ${QJS_CORE_TARGET})
+
+# QuickJS Experimental (Test).
+set(QJS_TEST_EXP_TARGET qjs_test_exp)
+add_executable(${QJS_TEST_EXP_TARGET} ${QJS_TEST_EXP_SOURCE_DIR}/test.c)
+target_link_libraries(${QJS_TEST_EXP_TARGET} PRIVATE ${QJS_CORE_TARGET})
