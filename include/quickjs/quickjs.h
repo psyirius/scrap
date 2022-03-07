@@ -1,6 +1,3 @@
-/*
- * QuickJS Javascript Engine
- */
 #pragma once
 
 #include <stdio.h>

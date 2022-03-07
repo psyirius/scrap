@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 #include "quickjs/quickjs.h"
-#include "quickjs/libc/quickjs-libc.h"
+#include "quickjs/libc.h"
 #include "quickjs/utils/cstring.h"
 
 // Compiled Js

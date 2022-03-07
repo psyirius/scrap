@@ -18,7 +18,7 @@
 #endif
 
 #include "quickjs/utils/cutils.h"
-#include "quickjs/libc/quickjs-libc.h"
+#include "quickjs/libc.h"
 
 // repl.js compiled
 #include "lib/repl.h"

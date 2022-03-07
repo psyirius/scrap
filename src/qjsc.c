@@ -15,7 +15,7 @@
 #endif
 
 #include "quickjs/utils/cutils.h"
-#include "quickjs/libc/quickjs-libc.h"
+#include "quickjs/libc.h"
 
 typedef struct {
     char *name;
@@ -621,7 +621,7 @@ int main(int argc, char **argv) {
 
     if (output_type != OUTPUT_C) {
         fprintf(file,
-            "#include \"quickjs/quickjs-libc.h\"\n"
+            "#include \"quickjs/libc.h\"\n"
             "\n"
         );
     } else {

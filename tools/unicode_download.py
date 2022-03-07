@@ -21,7 +21,9 @@ def mkdirp(_dir) -> None:
     os.makedirs(_dir, exist_ok=True)
 
 
-unicode_public_url = f'https://unicode.org/Public'
+unicode_url = 'https://unicode.org'
+unicode_public_url = urljoin(unicode_url, 'Public')
+
 version = '14.0.0'
 
 base_url = urljoin(unicode_public_url, version, 'ucd')

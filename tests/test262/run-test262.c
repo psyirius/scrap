@@ -17,7 +17,7 @@
 
 #include "quickjs/utils/cutils.h"
 #include "quickjs/utils/list.h"
-#include "quickjs/libc/quickjs-libc.h"
+#include "quickjs/libc.h"
 
 /* enable test262 thread support to test SharedArrayBuffer and Atomics */
 #define CONFIG_AGENT
