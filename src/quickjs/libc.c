@@ -1,6 +1,6 @@
 /*
  * QuickJS C library
- */
+*/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -68,26 +68,26 @@ typedef sig_t sighandler_t;
 */
 
 typedef struct {
-    struct list_head link;
+    ListNode link;
     int fd;
     JSValue rw_func[2];
 } JSOSRWHandler;
 
 typedef struct {
-    struct list_head link;
+    ListNode link;
     int sig_num;
     JSValue func;
 } JSOSSignalHandler;
 
 typedef struct {
-    struct list_head link;
+    ListNode link;
     BOOL has_object;
     int64_t timeout;
     JSValue func;
 } JSOSTimer;
 
 typedef struct {
-    struct list_head link;
+    ListNode link;
     uint8_t *data;
     size_t data_len;
     /* list of SharedArrayBuffers, necessary to free the message */
@@ -100,25 +100,24 @@ typedef struct {
 #ifdef USE_WORKER
     pthread_mutex_t mutex;
 #endif
-    struct list_head msg_queue; /* list of JSWorkerMessage.link */
+    ListNode msg_queue; /* list of JSWorkerMessage.link */
     int read_fd;
     int write_fd;
 } JSWorkerMessagePipe;
 
 typedef struct {
-    struct list_head link;
+    ListNode link;
     JSWorkerMessagePipe *recv_pipe;
     JSValue on_message_func;
 } JSWorkerMessageHandler;
 
 typedef struct {
-    struct list_head os_rw_handlers; /* list of JSOSRWHandler.link */
-    struct list_head os_signal_handlers; /* list JSOSSignalHandler.link */
-    struct list_head os_timers; /* list of JSOSTimer.link */
-    struct list_head port_list; /* list of JSWorkerMessageHandler.link */
-    int eval_script_recurse; /* only used in the main thread */
-    /* not used in the main thread */
-    JSWorkerMessagePipe *recv_pipe, *send_pipe;
+    ListNode os_rw_handlers;             /* list of JSOSRWHandler.link */
+    ListNode os_signal_handlers;         /* list JSOSSignalHandler.link */
+    ListNode os_timers;                  /* list of JSOSTimer.link */
+    ListNode port_list;                  /* list of JSWorkerMessageHandler.link */
+    int eval_script_recurse;                     /* only used in the main thread */
+    JSWorkerMessagePipe *recv_pipe, *send_pipe;  /* not used in the main thread */
 } JSThreadState;
 
 static uint64_t os_pending_signals;
@@ -1761,7 +1760,7 @@ static BOOL is_main_thread(JSRuntime *rt) {
 
 static JSOSRWHandler *find_rh(JSThreadState *ts, int fd) {
     JSOSRWHandler *rh;
-    struct list_head *el;
+    ListNode *el;
 
     list_for_each(el, &ts->os_rw_handlers) {
         rh = list_entry(el, JSOSRWHandler, link);
@@ -1773,7 +1772,7 @@ static JSOSRWHandler *find_rh(JSThreadState *ts, int fd) {
 
 static void free_rw_handler(JSRuntime *rt, JSOSRWHandler *rh) {
     int i;
-    list_del(&rh->link);
+    List.delete(&rh->link);
     for (i = 0; i < 2; i++) {
         JS_FreeValueRT(rt, rh->rw_func[i]);
     }
@@ -1813,7 +1812,7 @@ static JSValue js_os_setReadHandler(JSContext *ctx, JSValueConst this_val,
             rh->fd = fd;
             rh->rw_func[0] = JS_NULL;
             rh->rw_func[1] = JS_NULL;
-            list_add_tail(&rh->link, &ts->os_rw_handlers);
+            List.push(&ts->os_rw_handlers, &rh->link);
         }
         JS_FreeValue(ctx, rh->rw_func[magic]);
         rh->rw_func[magic] = JS_DupValue(ctx, func);
@@ -1823,7 +1822,7 @@ static JSValue js_os_setReadHandler(JSContext *ctx, JSValueConst this_val,
 
 static JSOSSignalHandler *find_sh(JSThreadState *ts, int sig_num) {
     JSOSSignalHandler *sh;
-    struct list_head *el;
+    ListNode *el;
     list_for_each(el, &ts->os_signal_handlers) {
         sh = list_entry(el, JSOSSignalHandler, link);
         if (sh->sig_num == sig_num)
@@ -1833,7 +1832,7 @@ static JSOSSignalHandler *find_sh(JSThreadState *ts, int sig_num) {
 }
 
 static void free_sh(JSRuntime *rt, JSOSSignalHandler *sh) {
-    list_del(&sh->link);
+    List.delete(&sh->link);
     JS_FreeValueRT(rt, sh->func);
     js_free_rt(rt, sh);
 }
@@ -1885,7 +1884,7 @@ static JSValue js_os_signal(JSContext *ctx, JSValueConst this_val,
             if (!sh)
                 return JS_EXCEPTION;
             sh->sig_num = sig_num;
-            list_add_tail(&sh->link, &ts->os_signal_handlers);
+            List.push(&ts->os_signal_handlers, &sh->link);
         }
         JS_FreeValue(ctx, sh->func);
         sh->func = JS_DupValue(ctx, func);
@@ -1914,7 +1913,7 @@ static int64_t get_time_ms(void) {
 
 static void unlink_timer(JSRuntime *rt, JSOSTimer *th) {
     if (th->link.prev) {
-        list_del(&th->link);
+        List.delete(&th->link);
         th->link.prev = th->link.next = NULL;
     }
 }
@@ -1968,7 +1967,7 @@ static JSValue js_os_setTimeout(JSContext *ctx, JSValueConst this_val,
     th->has_object = TRUE;
     th->timeout = get_time_ms() + delay;
     th->func = JS_DupValue(ctx, func);
-    list_add_tail(&th->link, &ts->os_timers);
+    List.push(&ts->os_timers, &th->link);
     JS_SetOpaque(obj, th);
     return obj;
 }
@@ -2008,15 +2007,15 @@ static int js_os_poll(JSContext *ctx) {
     int min_delay, console_fd;
     int64_t cur_time, delay;
     JSOSRWHandler *rh;
-    struct list_head *el;
+    ListNode *el;
 
     /* XXX: handle signals if useful */
 
-    if (list_empty(&ts->os_rw_handlers) && list_empty(&ts->os_timers))
+    if (List.is_empty(&ts->os_rw_handlers) && List.is_empty(&ts->os_timers))
         return -1; /* no more events */
 
     /* XXX: only timers and basic console input are supported */
-    if (!list_empty(&ts->os_timers)) {
+    if (!List.is_empty(&ts->os_timers)) {
         cur_time = get_time_ms();
         min_delay = 10000;
         list_for_each(el, &ts->os_timers) {
@@ -2092,14 +2091,14 @@ static int handle_posted_message(JSRuntime *rt, JSContext *ctx,
     JSValue obj, data_obj, func, retval;
 
     pthread_mutex_lock(&ps->mutex);
-    if (!list_empty(&ps->msg_queue)) {
+    if (!List.is_empty(&ps->msg_queue)) {
         el = ps->msg_queue.next;
         msg = list_entry(el, JSWorkerMessage, link);
 
         /* remove the message from the queue */
-        list_del(&msg->link);
+        List.delete(&msg->link);
 
-        if (list_empty(&ps->msg_queue)) {
+        if (List.is_empty(&ps->msg_queue)) {
             uint8_t buf[16];
             int ret;
             for(;;) {
@@ -2182,11 +2181,11 @@ static int js_os_poll(JSContext *ctx)
         }
     }
 
-    if (list_empty(&ts->os_rw_handlers) && list_empty(&ts->os_timers) &&
-        list_empty(&ts->port_list))
+    if (List.is_empty(&ts->os_rw_handlers) && List.is_empty(&ts->os_timers) &&
+        List.is_empty(&ts->port_list))
         return -1; /* no more events */
 
-    if (!list_empty(&ts->os_timers)) {
+    if (!List.is_empty(&ts->os_timers)) {
         cur_time = get_time_ms();
         min_delay = 10000;
         list_for_each(el, &ts->os_timers) {
@@ -3086,7 +3085,7 @@ static JSWorkerMessagePipe *js_new_message_pipe(void) {
         return NULL;
     }
     ps->ref_count = 1;
-    init_list_head(&ps->msg_queue);
+    List.init(&ps->msg_queue);
     pthread_mutex_init(&ps->mutex, NULL);
     ps->read_fd = pipe_fds[0];
     ps->write_fd = pipe_fds[1];
@@ -3134,7 +3133,7 @@ static void js_free_port(JSRuntime *rt, JSWorkerMessageHandler *port) {
     if (port) {
         js_free_message_pipe(port->recv_pipe);
         JS_FreeValueRT(rt, port->on_message_func);
-        list_del(&port->link);
+        List.delete(&port->link);
         js_free_rt(rt, port);
     }
 }
@@ -3358,7 +3357,7 @@ static JSValue js_worker_postMessage(JSContext *ctx, JSValueConst this_val,
     ps = worker->send_pipe;
     pthread_mutex_lock(&ps->mutex);
     /* indicate that data is present */
-    if (list_empty(&ps->msg_queue)) {
+    if (List.is_empty(&ps->msg_queue)) {
         uint8_t ch = '\0';
         int ret;
         for (;;) {
@@ -3369,7 +3368,7 @@ static JSValue js_worker_postMessage(JSContext *ctx, JSValueConst this_val,
                 break;
         }
     }
-    list_add_tail(&msg->link, &ps->msg_queue);
+    List.push(&ps->msg_queue, &msg->link);
     pthread_mutex_unlock(&ps->mutex);
     return JS_UNDEFINED;
     fail:
@@ -3409,7 +3408,7 @@ static JSValue js_worker_set_onmessage(JSContext *ctx, JSValueConst this_val,
                 return JS_EXCEPTION;
             port->recv_pipe = js_dup_message_pipe(worker->recv_pipe);
             port->on_message_func = JS_NULL;
-            list_add_tail(&port->link, &ts->port_list);
+            List.push(&ts->port_list, &port->link);
             worker->msg_handler = port;
         }
         JS_FreeValue(ctx, port->on_message_func);
@@ -3648,10 +3647,10 @@ void js_std_init_handlers(JSRuntime *rt) {
         exit(1);
     }
     memset(ts, 0, sizeof(*ts));
-    init_list_head(&ts->os_rw_handlers);
-    init_list_head(&ts->os_signal_handlers);
-    init_list_head(&ts->os_timers);
-    init_list_head(&ts->port_list);
+    List.init(&ts->os_rw_handlers);
+    List.init(&ts->os_signal_handlers);
+    List.init(&ts->os_timers);
+    List.init(&ts->port_list);
 
     JS_SetRuntimeOpaque(rt, ts);
 
@@ -3670,7 +3669,7 @@ void js_std_init_handlers(JSRuntime *rt) {
 
 void js_std_free_handlers(JSRuntime *rt) {
     JSThreadState *ts = JS_GetRuntimeOpaque(rt);
-    struct list_head *el, *el1;
+    ListNode *el, *el1;
 
     list_for_each_safe(el, el1, &ts->os_rw_handlers) {
         JSOSRWHandler *rh = list_entry(el, JSOSRWHandler, link);

@@ -381,7 +381,7 @@ static JSValue js_evalScript(JSContext *ctx, JSValue this_val,
 #include <pthread.h>
 
 typedef struct {
-    struct list_head link;
+    ListNode link;
     pthread_t tid;
     char *script;
     JSValue broadcast_func;
@@ -393,7 +393,7 @@ typedef struct {
 } Test262Agent;
 
 typedef struct {
-    struct list_head link;
+    ListNode link;
     char *str;
 } AgentReport;
 
@@ -404,11 +404,11 @@ static void add_helpers(JSContext *ctx);
 static pthread_mutex_t agent_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t agent_cond = PTHREAD_COND_INITIALIZER;
 /* list of Test262Agent.link */
-static struct list_head agent_list = LIST_HEAD_INIT(agent_list);
+static ListNode agent_list = LIST_HEAD_INIT(agent_list);
 
 static pthread_mutex_t report_mutex = PTHREAD_MUTEX_INITIALIZER;
 /* list of AgentReport.link */
-static struct list_head report_list = LIST_HEAD_INIT(report_list);
+static ListNode report_list = LIST_HEAD_INIT(report_list);
 
 static void *agent_start(void *arg) {
     Test262Agent *agent = arg;
@@ -501,20 +501,20 @@ static JSValue js_agent_start(JSContext *ctx, JSValue this_val,
     agent->broadcast_sab = JS_UNDEFINED;
     agent->script = strdup(script);
     JS_FreeCString(ctx, script);
-    list_add_tail(&agent->link, &agent_list);
+    List.push(&agent_list, &agent->link);
     pthread_create(&agent->tid, NULL, agent_start, agent);
     return JS_UNDEFINED;
 }
 
 static void js_agent_free(JSContext *ctx) {
-    struct list_head *el, *el1;
+    ListNode *el, *el1;
     Test262Agent *agent;
 
     list_for_each_safe(el, el1, &agent_list) {
         agent = list_entry(el, Test262Agent, link);
         pthread_join(agent->tid, NULL);
         JS_FreeValue(ctx, agent->broadcast_sab);
-        list_del(&agent->link);
+        List.delete(&agent->link);
         free(agent);
     }
 }
@@ -529,7 +529,7 @@ static JSValue js_agent_leaving(JSContext *ctx, JSValue this_val,
 }
 
 static BOOL is_broadcast_pending(void) {
-    struct list_head *el;
+    ListNode *el;
     Test262Agent *agent;
     list_for_each(el, &agent_list) {
         agent = list_entry(el, Test262Agent, link);
@@ -542,7 +542,7 @@ static BOOL is_broadcast_pending(void) {
 static JSValue js_agent_broadcast(JSContext *ctx, JSValue this_val,
                                   int argc, JSValue *argv) {
     JSValueConst sab = argv[0];
-    struct list_head *el;
+    ListNode *el;
     Test262Agent *agent;
     uint8_t *buf;
     size_t buf_size;
@@ -617,11 +617,11 @@ static JSValue js_agent_getReport(JSContext *ctx, JSValue this_val,
     JSValue ret;
 
     pthread_mutex_lock(&report_mutex);
-    if (list_empty(&report_list)) {
+    if (List.is_empty(&report_list)) {
         rep = NULL;
     } else {
         rep = list_entry(report_list.next, AgentReport, link);
-        list_del(&rep->link);
+        List.delete(&rep->link);
     }
     pthread_mutex_unlock(&report_mutex);
     if (rep) {
@@ -647,7 +647,7 @@ static JSValue js_agent_report(JSContext *ctx, JSValue this_val,
     JS_FreeCString(ctx, str);
 
     pthread_mutex_lock(&report_mutex);
-    list_add_tail(&rep->link, &report_list);
+    List.push(&report_list, &rep->link);
     pthread_mutex_unlock(&report_mutex);
     return JS_UNDEFINED;
 }
