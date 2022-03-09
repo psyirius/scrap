@@ -1627,15 +1627,15 @@ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
     set_dummy_numeric_ops(&rt->bigdecimal_ops);
 #endif
 
-    List.init(&rt->context_list);
-    List.init(&rt->gc_obj_list);
-    List.init(&rt->gc_zero_ref_count_list);
+    List.ctor(&rt->context_list);
+    List.ctor(&rt->gc_obj_list);
+    List.ctor(&rt->gc_zero_ref_count_list);
     rt->gc_phase = JS_GC_PHASE_NONE;
 
 #ifdef DUMP_LEAKS
-    List.init(&rt->string_list);
+    List.ctor(&rt->string_list);
 #endif
-    List.init(&rt->job_list);
+    List.ctor(&rt->job_list);
 
     if (JS_InitAtoms(rt))
         goto fail;
@@ -1940,7 +1940,7 @@ void JS_FreeRuntime(JSRuntime *rt)
             JS_FreeValueRT(rt, e->argv[i]);
         js_free_rt(rt, e);
     }
-    List.init(&rt->job_list);
+    List.ctor(&rt->job_list);
 
     JS_RunGC(rt);
 
@@ -2144,7 +2144,7 @@ JSContext *JS_NewContextRaw(JSRuntime *rt)
     ctx->array_ctor = JS_NULL;
     ctx->regexp_ctor = JS_NULL;
     ctx->promise_ctor = JS_NULL;
-    List.init(&ctx->loaded_modules);
+    List.ctor(&ctx->loaded_modules);
 
     JS_AddIntrinsicBasicObjects(ctx);
     return ctx;
@@ -5691,7 +5691,7 @@ static void gc_decref(JSRuntime *rt)
     ListNode *el, *el1;
     JSGCObjectHeader *p;
 
-    List.init(&rt->tmp_obj_list);
+    List.ctor(&rt->tmp_obj_list);
 
     /* decrement the refcount of all the children of all the GC
        objects and move the GC objects with zero refcount to
@@ -5791,7 +5791,7 @@ static void gc_free_cycles(JSRuntime *rt)
         js_free_rt(rt, p);
     }
 
-    List.init(&rt->gc_zero_ref_count_list);
+    List.ctor(&rt->gc_zero_ref_count_list);
 }
 
 void JS_RunGC(JSRuntime *rt)
@@ -16290,7 +16290,7 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
     arg_buf = argv;
     sf->arg_count = argc;
     sf->cur_func = (JSValue)func_obj;
-    List.init(&sf->var_ref_list);
+    List.ctor(&sf->var_ref_list);
     var_refs = p->u.func.var_refs;
 
     local_buf = alloca(alloca_size);
@@ -18897,7 +18897,7 @@ static __exception int async_func_init(JSContext *ctx, JSAsyncFunctionState *s,
     int local_count, i, arg_buf_len, n;
 
     sf = &s->frame;
-    List.init(&sf->var_ref_list);
+    List.ctor(&sf->var_ref_list);
     p = JS_VALUE_GET_OBJ(func_obj);
     b = p->u.func.function_bytecode;
     sf->js_mode = b->js_mode;
@@ -19744,7 +19744,7 @@ static JSValue js_async_generator_function_call(JSContext *ctx, JSValueConst fun
     if (!s)
         return JS_EXCEPTION;
     s->state = JS_ASYNC_GENERATOR_STATE_SUSPENDED_START;
-    List.init(&s->queue);
+    List.ctor(&s->queue);
     if (async_func_init(ctx, &s->func_state, func_obj, this_obj, argc, argv)) {
         s->state = JS_ASYNC_GENERATOR_STATE_COMPLETED;
         goto fail;
@@ -28727,7 +28727,7 @@ static JSFunctionDef *js_new_function_def(JSContext *ctx,
         return NULL;
 
     fd->ctx = ctx;
-    List.init(&fd->child_list);
+    List.ctor(&fd->child_list);
 
     /* insert in parent list */
     fd->parent = parent;
@@ -45519,14 +45519,14 @@ static JSValue js_map_constructor(JSContext *ctx, JSValueConst new_target,
     s = js_mallocz(ctx, sizeof(*s));
     if (!s)
         goto fail;
-    List.init(&s->records);
+    List.ctor(&s->records);
     s->is_weak = is_weak;
     JS_SetOpaque(obj, s);
     s->hash_size = 1;
     s->hash_table = js_malloc(ctx, sizeof(s->hash_table[0]) * s->hash_size);
     if (!s->hash_table)
         goto fail;
-    List.init(&s->hash_table[0]);
+    List.ctor(&s->hash_table[0]);
     s->record_count_threshold = 4;
 
     arr = JS_UNDEFINED;
@@ -45697,7 +45697,7 @@ static void map_hash_resize(JSContext *ctx, JSMapState *s)
     new_hash_size += slack / sizeof(*new_hash_table);
 
     for(i = 0; i < new_hash_size; i++)
-        List.init(&new_hash_table[i]);
+        List.ctor(&new_hash_table[i]);
 
     list_for_each(el, &s->records) {
         mr = list_entry(el, JSMapRecord, link);
@@ -46619,7 +46619,7 @@ static JSValue js_promise_constructor(JSContext *ctx, JSValueConst new_target,
     s->promise_state = JS_PROMISE_PENDING;
     s->is_handled = FALSE;
     for(i = 0; i < 2; i++)
-        List.init(&s->promise_reactions[i]);
+        List.ctor(&s->promise_reactions[i]);
     s->promise_result = JS_UNDEFINED;
     JS_SetOpaque(obj, s);
     if (js_create_resolving_functions(ctx, args, obj))
@@ -51168,7 +51168,7 @@ static JSValue js_array_buffer_constructor3(JSContext *ctx,
         }
         abuf->data = buf;
     }
-    List.init(&abuf->array_list);
+    List.ctor(&abuf->array_list);
     abuf->detached = FALSE;
     abuf->shared = (class_id == JS_CLASS_SHARED_ARRAY_BUFFER);
     abuf->opaque = opaque;
@@ -53927,7 +53927,7 @@ static JSValue js_atomics_notify(JSContext *ctx,
     n = 0;
     if (abuf->shared && count > 0) {
         pthread_mutex_lock(&js_atomics_mutex);
-        List.init(&waiter_list);
+        List.ctor(&waiter_list);
         list_for_each_safe(el, el1, &js_atomics_waiter_list) {
             waiter = list_entry(el, JSAtomicsWaiter, link);
             if (waiter->ptr == ptr) {

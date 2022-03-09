@@ -3085,7 +3085,7 @@ static JSWorkerMessagePipe *js_new_message_pipe(void) {
         return NULL;
     }
     ps->ref_count = 1;
-    List.init(&ps->msg_queue);
+    List.ctor(&ps->msg_queue);
     pthread_mutex_init(&ps->mutex, NULL);
     ps->read_fd = pipe_fds[0];
     ps->write_fd = pipe_fds[1];
@@ -3647,10 +3647,10 @@ void js_std_init_handlers(JSRuntime *rt) {
         exit(1);
     }
     memset(ts, 0, sizeof(*ts));
-    List.init(&ts->os_rw_handlers);
-    List.init(&ts->os_signal_handlers);
-    List.init(&ts->os_timers);
-    List.init(&ts->port_list);
+    List.ctor(&ts->os_rw_handlers);
+    List.ctor(&ts->os_signal_handlers);
+    List.ctor(&ts->os_timers);
+    List.ctor(&ts->port_list);
 
     JS_SetRuntimeOpaque(rt, ts);
 
