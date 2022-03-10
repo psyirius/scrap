@@ -63,6 +63,10 @@ typedef sig_t sighandler_t;
 #include "quickjs/utils/list.h"
 #include "quickjs/libc.h"
 
+/* return the pointer of type 'type *' containing 'elem' as field 'member' */
+#define list_entry(elem, type, member) \
+    ((type*)((uint8_t*)(elem) - offsetof(type, member)))
+
 /* TODO:
    - add socket calls
 */
@@ -1772,7 +1776,7 @@ static JSOSRWHandler *find_rh(JSThreadState *ts, int fd) {
 
 static void free_rw_handler(JSRuntime *rt, JSOSRWHandler *rh) {
     int i;
-    List.delete(&rh->link);
+    List.remove(&rh->link);
     for (i = 0; i < 2; i++) {
         JS_FreeValueRT(rt, rh->rw_func[i]);
     }
@@ -1832,7 +1836,7 @@ static JSOSSignalHandler *find_sh(JSThreadState *ts, int sig_num) {
 }
 
 static void free_sh(JSRuntime *rt, JSOSSignalHandler *sh) {
-    List.delete(&sh->link);
+    List.remove(&sh->link);
     JS_FreeValueRT(rt, sh->func);
     js_free_rt(rt, sh);
 }
@@ -1913,7 +1917,7 @@ static int64_t get_time_ms(void) {
 
 static void unlink_timer(JSRuntime *rt, JSOSTimer *th) {
     if (th->link.prev) {
-        List.delete(&th->link);
+        List.remove(&th->link);
         th->link.prev = th->link.next = NULL;
     }
 }
@@ -2096,7 +2100,7 @@ static int handle_posted_message(JSRuntime *rt, JSContext *ctx,
         msg = list_entry(el, JSWorkerMessage, link);
 
         /* remove the message from the queue */
-        List.delete(&msg->link);
+        List.remove(&msg->link);
 
         if (List.is_empty(&ps->msg_queue)) {
             uint8_t buf[16];
@@ -3133,7 +3137,7 @@ static void js_free_port(JSRuntime *rt, JSWorkerMessageHandler *port) {
     if (port) {
         js_free_message_pipe(port->recv_pipe);
         JS_FreeValueRT(rt, port->on_message_func);
-        List.delete(&port->link);
+        List.remove(&port->link);
         js_free_rt(rt, port);
     }
 }

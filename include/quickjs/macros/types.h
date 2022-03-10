@@ -11,6 +11,9 @@
 typedef unsigned char bool;
 #endif
 
+typedef float       float32_t;
+typedef long double float64_t;
+
 #ifndef YES
 #define YES  1
 #endif

@@ -1,50 +1,95 @@
 /*
- * Linux klist like list implementation
+ * Linux klist like doubly-linked list implementation
  */
 #pragma once
 
 #include "quickjs/macros/struct.h"
 #include "quickjs/macros/types.h"
+#include "quickjs/macros/function.h"
 
-DEF_STRUCT(ListNode) {
-    ListNode *prev;
-    ListNode *next;
+DEF_UNION(ListData) {
+    int8_t  i8;
+    uint8_t u8;
+
+    int16_t  i16;
+    uint16_t u16;
+
+    int32_t  i32;
+    uint32_t u32;
+
+    int64_t  i64;
+    uint64_t u64;
+
+    float32_t f32;
+    float64_t f64;
+
+    char* str;
+    void* ptr;
 };
 
-// Macro definitions
-#define list_init(el) { &(el), &(el) }
+DEF_STRUCT(ListNode) {
+    // List props
+    ListNode *head;
 
-/* return the pointer of type 'type *' containing 'el' as field 'member' */
-#define list_entry(el, type, member) \
-    ((type*)((uint8_t*)(el) - offsetof(type, member)))
+    ListNode *prev;
+    ListNode *next;
+
+    // flags
+    bool on_heap;
+    bool is_head;
+
+    // data
+    ListData data;
+};
+
+DEF_FUNC_TYPE(ListComparator, bool, ListNode* prev, ListNode* next);
+
+// Macro definitions
+#define list_init(el) { \
+    .head=&(el), \
+    .prev=&(el), \
+    .next=&(el), \
+    .on_heap=false, \
+    .is_head=true, \
+    .data={.ptr=nullptr} \
+}
 
 // Iterators
-#define list_for_each(el, head) \
-  for((el) = (head)->next; (el) != (head); (el) = (el)->next)
+#define list_for_each(elem, head) \
+    for ((elem) = (head)->next; (elem) != (head); (elem) = (elem)->next)
 
-#define list_for_each_safe(el, el1, head) \
-    for((el) = (head)->next, (el1) = (el)->next; (el) != (head); \
-        (el) = (el1), (el1) = (el)->next)
+#define list_for_each_safe(elem, elt, head) \
+    for ((elem) = (head)->next, (elt) = (elem)->next; (elem) != (head); (elem) = (elt), (elt) = (elem)->next)
 
-#define list_for_each_rev(el, head) \
-  for((el) = (head)->prev; (el) != (head); (el) = (el)->prev)
+#define list_for_each_rev(elem, head) \
+    for ((elem) = (head)->prev; (elem) != (head); (elem) = (elem)->prev)
 
-#define list_for_each_rev_safe(el, el1, head) \
-    for((el) = (head)->prev, (el1) = (el)->prev; (el) != (head); \
-        (el) = (el1), (el1) = (el)->prev)
+#define list_for_each_rev_safe(elem, elt, head) \
+    for ((elem) = (head)->prev, (elt) = (elem)->prev; (elem) != (head); (elem) = (elt), (elt) = (elem)->prev)
 
 #define CT_NAME List
 #define CT_TYPE ListNode*
 #include "quickjs/macros/ctypi.h"
 
 // Namespace model
-extern struct nsList {
-    DEF_METHOD(init, void);
+DEF_STRUCT(ListPrototype) {
+    DEF_STATIC_METHOD(new, ListNode*);
+    DEF_STATIC_METHOD(new_node, ListNode*);
+    DEF_STATIC_METHOD(ctor, void, ListNode *node);
     DEF_METHOD(size, size_t);
+    DEF_METHOD(indexOf, size_t, ListNode *node);
+    DEF_METHOD(at, ListNode*, size_t index);
+    DEF_METHOD(insert_at, bool, ListNode* node, size_t index);
     DEF_METHOD(push, void, ListNode* node);
     DEF_METHOD(unshift, void, ListNode* node);
-    DEF_METHOD(delete, void);
+    DEF_STATIC_METHOD(remove, void, ListNode* node);
+    DEF_STATIC_METHOD(delete, void, ListNode* node);
+    DEF_METHOD(reverse, void);
     DEF_METHOD(is_empty, bool);
-} List;
+    DEF_METHOD(clear, size_t);
+    DEF_METHOD(destroy, void);
+};
+
+extern ListPrototype List;
 
 #include "quickjs/macros/ctypi.h"

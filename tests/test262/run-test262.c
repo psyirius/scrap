@@ -514,7 +514,7 @@ static void js_agent_free(JSContext *ctx) {
         agent = list_entry(el, Test262Agent, link);
         pthread_join(agent->tid, NULL);
         JS_FreeValue(ctx, agent->broadcast_sab);
-        List.delete(&agent->link);
+        List.remove(&agent->link);
         free(agent);
     }
 }
@@ -621,7 +621,7 @@ static JSValue js_agent_getReport(JSContext *ctx, JSValue this_val,
         rep = NULL;
     } else {
         rep = list_entry(report_list.next, AgentReport, link);
-        List.delete(&rep->link);
+        List.remove(&rep->link);
     }
     pthread_mutex_unlock(&report_mutex);
     if (rep) {

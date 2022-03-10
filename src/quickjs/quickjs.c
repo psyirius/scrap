@@ -1,27 +1,3 @@
-/*
- * QuickJS Javascript Engine
- *
- * Copyright (c) 2017-2021 Fabrice Bellard
- * Copyright (c) 2017-2021 Charlie Gordon
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -46,6 +22,10 @@
 #include "quickjs/utils/cutils.h"
 #include "quickjs/utils/list.h"
 #include "quickjs/utils/libregexp.h"
+
+/* return the pointer of type 'type *' containing 'elem' as field 'member' */
+#define list_entry(elem, type, member) \
+    ((type*)((uint8_t*)(elem) - offsetof(type, member)))
 
 #ifdef CONFIG_BIGNUM
 #include "quickjs/utils/libbf.h"
@@ -222,21 +202,15 @@ typedef enum {
 typedef enum OPCodeEnum OPCodeEnum;
 
 #ifdef CONFIG_BIGNUM
-/* function pointers are used for numeric operations so that it is
-   possible to remove some numeric types */
+/* function pointers are used for numeric operations so that it is possible to remove some numeric types */
 typedef struct {
     JSValue (*to_string)(JSContext *ctx, JSValueConst val);
-    JSValue (*from_string)(JSContext *ctx, const char *buf,
-                           int radix, int flags, slimb_t *pexponent);
-    int (*unary_arith)(JSContext *ctx,
-                       JSValue *pres, OPCodeEnum op, JSValue op1);
-    int (*binary_arith)(JSContext *ctx, OPCodeEnum op,
-                        JSValue *pres, JSValue op1, JSValue op2);
-    int (*compare)(JSContext *ctx, OPCodeEnum op,
-                   JSValue op1, JSValue op2);
+    JSValue (*from_string)(JSContext *ctx, const char *buf, int radix, int flags, slimb_t *pExponent);
+    int (*unary_arith)(JSContext *ctx, JSValue *pres, OPCodeEnum op, JSValue op1);
+    int (*binary_arith)(JSContext *ctx, OPCodeEnum op, JSValue *pres, JSValue op1, JSValue op2);
+    int (*compare)(JSContext *ctx, OPCodeEnum op, JSValue op1, JSValue op2);
     /* only for bigfloat: */
-    JSValue (*mul_pow10_to_float64)(JSContext *ctx, const bf_t *a,
-                                    int64_t exponent);
+    JSValue (*mul_pow10_to_float64)(JSContext *ctx, const bf_t *a, int64_t exponent);
     int (*mul_pow10)(JSContext *ctx, JSValue *sp);
 } JSNumericOperations;
 #endif
@@ -1846,7 +1820,7 @@ int JS_ExecutePendingJob(JSRuntime *rt, JSContext **pctx)
 
     /* get the first pending job and execute it */
     e = list_entry(rt->job_list.next, JSJobEntry, link);
-    List.delete(&e->link);
+    List.remove(&e->link);
     ctx = e->ctx;
     res = e->job_func(e->ctx, e->argc, (JSValueConst *)e->argv);
     for(i = 0; i < e->argc; i++)
@@ -1914,7 +1888,7 @@ static inline void js_free_string(JSRuntime *rt, JSString *str)
             JS_FreeAtomStruct(rt, str);
         } else {
 #ifdef DUMP_LEAKS
-            List.delete(&str->link);
+            List.remove(&str->link);
 #endif
             js_free_rt(rt, str);
         }
@@ -2061,7 +2035,7 @@ void JS_FreeRuntime(JSRuntime *rt)
         JSAtomStruct *p = rt->atom_array[i];
         if (!atom_is_free(p)) {
 #ifdef DUMP_LEAKS
-            List.delete(&p->link);
+            List.remove(&p->link);
 #endif
             js_free_rt(rt, p);
         }
@@ -2091,7 +2065,7 @@ void JS_FreeRuntime(JSRuntime *rt)
             } else {
                 printf("\n");
             }
-            List.delete(&str->link);
+            List.remove(&str->link);
             js_free_rt(rt, str);
         }
         if (rt->rt_info)
@@ -2333,7 +2307,7 @@ void JS_FreeContext(JSContext *ctx)
 
     js_free_shape_null(ctx->rt, ctx->array_shape);
 
-    List.delete(&ctx->link);
+    List.remove(&ctx->link);
     remove_gc_object(&ctx->header);
     js_free_rt(ctx->rt, ctx);
 }
@@ -2918,7 +2892,7 @@ static void JS_FreeAtomStruct(JSRuntime *rt, JSAtomStruct *p)
     rt->atom_free_index = i;
     /* free the string structure */
 #ifdef DUMP_LEAKS
-    List.delete(&p->link);
+    List.remove(&p->link);
 #endif
     js_free_rt(rt, p);
     rt->atom_count--;
@@ -3550,7 +3524,7 @@ static int string_buffer_init2(JSContext *ctx, StringBuffer *s, int size,
     }
 #ifdef DUMP_LEAKS
     /* the StringBuffer may reallocate the JSString, only link it at the end */
-    List.delete(&s->str->link);
+    List.remove(&s->str->link);
 #endif
     return 0;
 }
@@ -4477,7 +4451,7 @@ static no_inline int resize_properties(JSContext *ctx, JSShape **psh,
         if (!sh_alloc)
             return -1;
         sh = get_shape_from_alloc(sh_alloc, new_hash_size);
-        List.delete(&old_sh->header.link);
+        List.remove(&old_sh->header.link);
         /* copy all the fields and the properties */
         memcpy(sh, old_sh,
                sizeof(JSShape) + sizeof(sh->prop[0]) * old_sh->prop_count);
@@ -4496,7 +4470,7 @@ static no_inline int resize_properties(JSContext *ctx, JSShape **psh,
         js_free(ctx, get_alloc_from_shape(old_sh));
     } else {
         /* only resize the properties */
-        List.delete(&sh->header.link);
+        List.remove(&sh->header.link);
         sh_alloc = js_realloc(ctx, get_alloc_from_shape(sh),
                               get_shape_size(new_hash_size, new_size));
         if (unlikely(!sh_alloc)) {
@@ -4540,7 +4514,7 @@ static int compact_properties(JSContext *ctx, JSObject *p)
     if (!sh_alloc)
         return -1;
     sh = get_shape_from_alloc(sh_alloc, new_hash_size);
-    List.delete(&old_sh->header.link);
+    List.remove(&old_sh->header.link);
     memcpy(sh, old_sh, sizeof(JSShape));
     List.push(&ctx->rt->gc_obj_list, &sh->header.link);
 
@@ -5240,7 +5214,7 @@ static void free_var_ref(JSRuntime *rt, JSVarRef *var_ref)
                 JS_FreeValueRT(rt, var_ref->value);
                 remove_gc_object(&var_ref->header);
             } else {
-                List.delete(&var_ref->header.link); /* still on the stack */
+                List.remove(&var_ref->header.link); /* still on the stack */
             }
             js_free_rt(rt, var_ref);
         }
@@ -5496,7 +5470,7 @@ void __JS_FreeValueRT(JSRuntime *rt, JSValue v)
                 JS_FreeAtomStruct(rt, p);
             } else {
 #ifdef DUMP_LEAKS
-                List.delete(&p->link);
+                List.remove(&p->link);
 #endif
                 js_free_rt(rt, p);
             }
@@ -5507,7 +5481,7 @@ void __JS_FreeValueRT(JSRuntime *rt, JSValue v)
         {
             JSGCObjectHeader *p = JS_VALUE_GET_PTR(v);
             if (rt->gc_phase != JS_GC_PHASE_REMOVE_CYCLES) {
-                List.delete(&p->link);
+                List.remove(&p->link);
                 List.unshift(&rt->gc_zero_ref_count_list, &p->link);
                 if (rt->gc_phase == JS_GC_PHASE_NONE) {
                     free_zero_refcount(rt);
@@ -5564,7 +5538,7 @@ static void add_gc_object(JSRuntime *rt, JSGCObjectHeader *h,
 
 static void remove_gc_object(JSGCObjectHeader *h)
 {
-    List.delete(&h->link);
+    List.remove(&h->link);
 }
 
 void JS_MarkValue(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func)
@@ -5681,7 +5655,7 @@ static void gc_decref_child(JSRuntime *rt, JSGCObjectHeader *p)
     assert(p->ref_count > 0);
     p->ref_count--;
     if (p->ref_count == 0 && p->mark == 1) {
-        List.delete(&p->link);
+        List.remove(&p->link);
         List.push(&rt->tmp_obj_list, &p->link);
     }
 }
@@ -5702,7 +5676,7 @@ static void gc_decref(JSRuntime *rt)
         mark_children(rt, p, gc_decref_child);
         p->mark = 1;
         if (p->ref_count == 0) {
-            List.delete(&p->link);
+            List.remove(&p->link);
             List.push(&rt->tmp_obj_list, &p->link);
         }
     }
@@ -5714,7 +5688,7 @@ static void gc_scan_incref_child(JSRuntime *rt, JSGCObjectHeader *p)
     if (p->ref_count == 1) {
         /* ref_count was 0: remove from tmp_obj_list and add at the
            end of gc_obj_list */
-        List.delete(&p->link);
+        List.remove(&p->link);
         List.push(&rt->gc_obj_list, &p->link);
         p->mark = 0; /* reset the mark for the next GC call */
     }
@@ -5777,7 +5751,7 @@ static void gc_free_cycles(JSRuntime *rt)
             free_gc_object(rt, p);
             break;
         default:
-            List.delete(&p->link);
+            List.remove(&p->link);
             List.push(&rt->gc_zero_ref_count_list, &p->link);
             break;
         }
@@ -10694,14 +10668,11 @@ static int JS_ToInt32SatFree(JSContext *ctx, int *pres, JSValue val)
     return 0;
 }
 
-int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val)
-{
+int JS_ToInt32Sat(JSContext *ctx, int *pres, JSValueConst val) {
     return JS_ToInt32SatFree(ctx, pres, JS_DupValue(ctx, val));
 }
 
-int JS_ToInt32Clamp(JSContext *ctx, int *pres, JSValueConst val,
-                    int min, int max, int min_offset)
-{
+int JS_ToInt32Clamp(JSContext *ctx, int *pres, JSValueConst val, int min, int max, int min_offset) {
     int res = JS_ToInt32SatFree(ctx, pres, JS_DupValue(ctx, val));
     if (res == 0) {
         if (*pres < min) {
@@ -10716,8 +10687,7 @@ int JS_ToInt32Clamp(JSContext *ctx, int *pres, JSValueConst val,
     return res;
 }
 
-static int JS_ToInt64SatFree(JSContext *ctx, int64_t *pres, JSValue val)
-{
+static int JS_ToInt64SatFree(JSContext *ctx, int64_t *pres, JSValue val) {
     uint32_t tag;
 
  redo:
@@ -10766,14 +10736,11 @@ static int JS_ToInt64SatFree(JSContext *ctx, int64_t *pres, JSValue val)
     }
 }
 
-int JS_ToInt64Sat(JSContext *ctx, int64_t *pres, JSValueConst val)
-{
+int JS_ToInt64Sat(JSContext *ctx, int64_t *pres, JSValueConst val) {
     return JS_ToInt64SatFree(ctx, pres, JS_DupValue(ctx, val));
 }
 
-int JS_ToInt64Clamp(JSContext *ctx, int64_t *pres, JSValueConst val,
-                    int64_t min, int64_t max, int64_t neg_offset)
-{
+int JS_ToInt64Clamp(JSContext *ctx, int64_t *pres, JSValueConst val, int64_t min, int64_t max, int64_t neg_offset) {
     int res = JS_ToInt64SatFree(ctx, pres, JS_DupValue(ctx, val));
     if (res == 0) {
         if (*pres < 0)
@@ -10788,8 +10755,8 @@ int JS_ToInt64Clamp(JSContext *ctx, int64_t *pres, JSValueConst val,
 
 /* Same as JS_ToInt32Free() but with a 64 bit result. Return (<0, 0)
    in case of exception */
-static int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val)
-{
+static
+int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val) {
     uint32_t tag;
     int64_t ret;
 
@@ -10848,13 +10815,11 @@ static int JS_ToInt64Free(JSContext *ctx, int64_t *pres, JSValue val)
     return 0;
 }
 
-int JS_ToInt64(JSContext *ctx, int64_t *pres, JSValueConst val)
-{
+int JS_ToInt64(JSContext *ctx, int64_t *pres, JSValueConst val) {
     return JS_ToInt64Free(ctx, pres, JS_DupValue(ctx, val));
 }
 
-int JS_ToInt64Ext(JSContext *ctx, int64_t *pres, JSValueConst val)
-{
+int JS_ToInt64Ext(JSContext *ctx, int64_t *pres, JSValueConst val) {
     if (JS_IsBigInt(ctx, val))
         return JS_ToBigInt64(ctx, pres, val);
     else
@@ -10862,8 +10827,8 @@ int JS_ToInt64Ext(JSContext *ctx, int64_t *pres, JSValueConst val)
 }
 
 /* return (<0, 0) in case of exception */
-static int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val)
-{
+static
+int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val) {
     uint32_t tag;
     int32_t ret;
 
@@ -10923,18 +10888,17 @@ static int JS_ToInt32Free(JSContext *ctx, int32_t *pres, JSValue val)
     return 0;
 }
 
-int JS_ToInt32(JSContext *ctx, int32_t *pres, JSValueConst val)
-{
+int JS_ToInt32(JSContext *ctx, int32_t *pres, JSValueConst val) {
     return JS_ToInt32Free(ctx, pres, JS_DupValue(ctx, val));
 }
 
-static inline int JS_ToUint32Free(JSContext *ctx, uint32_t *pres, JSValue val)
-{
+static inline
+int JS_ToUint32Free(JSContext *ctx, uint32_t *pres, JSValue val) {
     return JS_ToInt32Free(ctx, (int32_t *)pres, val);
 }
 
-static int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val)
-{
+static
+int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val) {
     uint32_t tag;
     int res;
 
@@ -10992,9 +10956,8 @@ static int JS_ToUint8ClampFree(JSContext *ctx, int32_t *pres, JSValue val)
     return 0;
 }
 
-static __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
-                                            JSValue val, BOOL is_array_ctor)
-{
+static __exception
+int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen, JSValue val, BOOL is_array_ctor) {
     uint32_t tag, len;
 
     tag = JS_VALUE_GET_TAG(val);
@@ -11072,14 +11035,12 @@ static __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
 
 #define MAX_SAFE_INTEGER (((int64_t)1 << 53) - 1)
 
-static BOOL is_safe_integer(double d)
-{
-    return isfinite(d) && floor(d) == d &&
-        fabs(d) <= (double)MAX_SAFE_INTEGER;
+static
+BOOL is_safe_integer(double d) {
+    return isfinite(d) && floor(d) == d && fabs(d) <= (double)MAX_SAFE_INTEGER;
 }
 
-int JS_ToIndex(JSContext *ctx, uint64_t *plen, JSValueConst val)
-{
+int JS_ToIndex(JSContext *ctx, uint64_t *plen, JSValueConst val) {
     int64_t v;
     if (JS_ToInt64Sat(ctx, &v, val))
         return -1;
@@ -11094,17 +11055,16 @@ int JS_ToIndex(JSContext *ctx, uint64_t *plen, JSValueConst val)
 
 /* convert a value to a length between 0 and MAX_SAFE_INTEGER.
    return -1 for exception */
-static __exception int JS_ToLengthFree(JSContext *ctx, int64_t *plen,
-                                       JSValue val)
-{
+static __exception
+int JS_ToLengthFree(JSContext *ctx, int64_t *plen, JSValue val) {
     int res = JS_ToInt64Clamp(ctx, plen, val, 0, MAX_SAFE_INTEGER, 0);
     JS_FreeValue(ctx, val);
     return res;
 }
 
 /* Note: can return an exception */
-static int JS_NumberIsInteger(JSContext *ctx, JSValueConst val)
-{
+static
+int JS_NumberIsInteger(JSContext *ctx, JSValueConst val) {
     double d;
     if (!JS_IsNumber(val))
         return FALSE;
@@ -11113,8 +11073,7 @@ static int JS_NumberIsInteger(JSContext *ctx, JSValueConst val)
     return isfinite(d) && floor(d) == d;
 }
 
-static BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx, JSValueConst val)
-{
+static BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx, JSValueConst val) {
     uint32_t tag;
 
     tag = JS_VALUE_GET_NORM_TAG(val);
@@ -11158,8 +11117,7 @@ static BOOL JS_NumberIsNegativeOrMinusZero(JSContext *ctx, JSValueConst val)
 
 #ifdef CONFIG_BIGNUM
 
-static JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
-{
+static JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix) {
     JSValue ret;
     bf_t a_s, *a;
     char *str;
@@ -11182,14 +11140,11 @@ static JSValue js_bigint_to_string1(JSContext *ctx, JSValueConst val, int radix)
     return ret;
 }
 
-static JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val)
-{
+static JSValue js_bigint_to_string(JSContext *ctx, JSValueConst val) {
     return js_bigint_to_string1(ctx, val, 10);
 }
 
-static JSValue js_ftoa(JSContext *ctx, JSValueConst val1, int radix,
-                       limb_t prec, bf_flags_t flags)
-{
+static JSValue js_ftoa(JSContext *ctx, JSValueConst val1, int radix, limb_t prec, bf_flags_t flags) {
     JSValue val, ret;
     bf_t a_s, *a;
     char *str;
@@ -11241,14 +11196,11 @@ static JSValue js_ftoa(JSContext *ctx, JSValueConst val1, int radix,
     return ret;
 }
 
-static JSValue js_bigfloat_to_string(JSContext *ctx, JSValueConst val)
-{
+static JSValue js_bigfloat_to_string(JSContext *ctx, JSValueConst val) {
     return js_ftoa(ctx, val, 10, 0, BF_RNDN | BF_FTOA_FORMAT_FREE_MIN);
 }
 
-static JSValue js_bigdecimal_to_string1(JSContext *ctx, JSValueConst val,
-                                        limb_t prec, int flags)
-{
+static JSValue js_bigdecimal_to_string1(JSContext *ctx, JSValueConst val, limb_t prec, int flags) {
     JSValue ret;
     bfdec_t *a;
     char *str;
@@ -11267,17 +11219,14 @@ static JSValue js_bigdecimal_to_string1(JSContext *ctx, JSValueConst val,
     return ret;
 }
 
-static JSValue js_bigdecimal_to_string(JSContext *ctx, JSValueConst val)
-{
-    return js_bigdecimal_to_string1(ctx, val, 0,
-                                    BF_RNDZ | BF_FTOA_FORMAT_FREE);
+static JSValue js_bigdecimal_to_string(JSContext *ctx, JSValueConst val) {
+    return js_bigdecimal_to_string1(ctx, val, 0, BF_RNDZ | BF_FTOA_FORMAT_FREE);
 }
 
 #endif /* CONFIG_BIGNUM */
 
 /* 2 <= base <= 36 */
-static char *i64toa(char *buf_end, int64_t n, unsigned int base)
-{
+static char* i64toa(char *buf_end, int64_t n, unsigned int base) {
     char *q = buf_end;
     int digit, is_neg;
 
@@ -11303,8 +11252,7 @@ static char *i64toa(char *buf_end, int64_t n, unsigned int base)
 
 /* buf1 contains the printf result */
 static void js_ecvt1(double d, int n_digits, int *decpt, int *sign, char *buf,
-                     int rounding_mode, char *buf1, int buf1_size)
-{
+                     int rounding_mode, char *buf1, int buf1_size) {
     if (rounding_mode != FE_TONEAREST)
         fesetround(rounding_mode);
     snprintf(buf1, buf1_size, "%+.*e", n_digits - 1, d);
@@ -11323,11 +11271,8 @@ static void js_ecvt1(double d, int n_digits, int *decpt, int *sign, char *buf,
 /* maximum buffer size for js_dtoa */
 #define JS_DTOA_BUF_SIZE 128
 
-/* needed because ecvt usually limits the number of digits to
-   17. Return the number of digits. */
-static int js_ecvt(double d, int n_digits, int *decpt, int *sign, char *buf,
-                   BOOL is_fixed)
-{
+/* needed because ecvt usually limits the number of digits to 17. Return the number of digits. */
+static int js_ecvt(double d, int n_digits, int *decpt, int *sign, char *buf, BOOL is_fixed) {
     int rounding_mode;
     char buf_tmp[JS_DTOA_BUF_SIZE];
 
@@ -11361,8 +11306,7 @@ static int js_ecvt(double d, int n_digits, int *decpt, int *sign, char *buf,
                from zero (RNDNA), but in printf the "ties" case is not
                specified (for example it is RNDN for glibc, RNDNA for
                Windows), so we must round manually. */
-            js_ecvt1(d, n_digits + 1, &decpt1, &sign1, buf1, FE_TONEAREST,
-                     buf_tmp, sizeof(buf_tmp));
+            js_ecvt1(d, n_digits + 1, &decpt1, &sign1, buf1, FE_TONEAREST, buf_tmp, sizeof(buf_tmp));
             /* XXX: could use 2 digits to reduce the average running time */
             if (buf1[n_digits] == '5') {
                 js_ecvt1(d, n_digits + 1, &decpt1, &sign1, buf1, FE_DOWNWARD,
@@ -11380,14 +11324,11 @@ static int js_ecvt(double d, int n_digits, int *decpt, int *sign, char *buf,
         }
 #endif /* CONFIG_PRINTF_RNDN */
     }
-    js_ecvt1(d, n_digits, decpt, sign, buf, rounding_mode,
-             buf_tmp, sizeof(buf_tmp));
+    js_ecvt1(d, n_digits, decpt, sign, buf, rounding_mode, buf_tmp, sizeof(buf_tmp));
     return n_digits;
 }
 
-static int js_fcvt1(char *buf, int buf_size, double d, int n_digits,
-                    int rounding_mode)
-{
+static int js_fcvt1(char *buf, int buf_size, double d, int n_digits, int rounding_mode) {
     int n;
     if (rounding_mode != FE_TONEAREST)
         fesetround(rounding_mode);
@@ -11398,8 +11339,7 @@ static int js_fcvt1(char *buf, int buf_size, double d, int n_digits,
     return n;
 }
 
-static void js_fcvt(char *buf, int buf_size, double d, int n_digits)
-{
+static void js_fcvt(char *buf, int buf_size, double d, int n_digits) {
     int rounding_mode;
     rounding_mode = FE_TONEAREST;
 #ifdef CONFIG_PRINTF_RNDN
@@ -11444,8 +11384,7 @@ static void js_fcvt(char *buf, int buf_size, double d, int n_digits)
 /* XXX: slow and maybe not fully correct. Use libbf when it is fast enough.
    XXX: radix != 10 is only supported for small integers
 */
-static void js_dtoa1(char *buf, double d, int radix, int n_digits, int flags)
-{
+static void js_dtoa1(char *buf, double d, int radix, int n_digits, int flags) {
     char *q;
 
     if (!isfinite(d)) {
@@ -11533,16 +11472,15 @@ static void js_dtoa1(char *buf, double d, int radix, int n_digits, int flags)
     }
 }
 
-static JSValue js_dtoa(JSContext *ctx,
-                       double d, int radix, int n_digits, int flags)
-{
+static JSValue js_dtoa(JSContext *ctx, double d, int radix, int n_digits, int flags) {
     char buf[JS_DTOA_BUF_SIZE];
+
     js_dtoa1(buf, d, radix, n_digits, flags);
+
     return JS_NewString(ctx, buf);
 }
 
-JSValue JS_ToStringInternal(JSContext *ctx, JSValueConst val, BOOL is_ToPropertyKey)
-{
+JSValue JS_ToStringInternal(JSContext *ctx, JSValueConst val, BOOL is_ToPropertyKey) {
     uint32_t tag;
     const char *str;
     char buf[32];
@@ -15998,7 +15936,7 @@ static void close_lexical_var(JSContext *ctx, JSStackFrame *sf, int idx, int is_
         if (var_idx == var_ref->var_idx && var_ref->is_arg == is_arg) {
             var_ref->value = JS_DupValue(ctx, sf->var_buf[var_idx]);
             var_ref->pvalue = &var_ref->value;
-            List.delete(&var_ref->header.link);
+            List.remove(&var_ref->header.link);
             /* the reference is no longer to a local variable */
             var_ref->is_detached = TRUE;
             add_gc_object(ctx->rt, &var_ref->header, JS_GC_OBJ_TYPE_VAR_REF);
@@ -19486,7 +19424,7 @@ static void js_async_generator_resolve_or_reject(JSContext *ctx,
     JSValue ret;
 
     next = list_entry(s->queue.next, JSAsyncGeneratorRequest, link);
-    List.delete(&next->link);
+    List.remove(&next->link);
     ret = JS_Call(ctx, next->resolving_funcs[is_reject], JS_UNDEFINED, 1,
                   &result);
     JS_FreeValue(ctx, ret);
@@ -27099,7 +27037,7 @@ static void js_free_module_def(JSContext *ctx, JSModuleDef *m)
     JS_FreeValue(ctx, m->func_obj);
     JS_FreeValue(ctx, m->eval_exception);
     JS_FreeValue(ctx, m->meta_obj);
-    List.delete(&m->link);
+    List.remove(&m->link);
     js_free(ctx, m);
 }
 
@@ -28864,7 +28802,7 @@ static void js_free_function_def(JSContext *ctx, JSFunctionDef *fd)
 
     if (fd->parent) {
         /* remove in parent list */
-        List.delete(&fd->link);
+        List.remove(&fd->link);
     }
     js_free(ctx, fd);
 }
@@ -32670,7 +32608,7 @@ static JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
 
     if (fd->parent) {
         /* remove from parent list */
-        List.delete(&fd->link);
+        List.remove(&fd->link);
     }
 
     js_free(ctx, fd);
@@ -39923,9 +39861,8 @@ static JSValue js_number_toFixed(JSContext *ctx, JSValueConst this_val,
     }
 }
 
-static JSValue js_number_toExponential(JSContext *ctx, JSValueConst this_val,
-                                       int argc, JSValueConst *argv)
-{
+static
+JSValue js_number_toExponential(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     JSValue val;
     int f, flags;
     double d;
@@ -45767,7 +45704,7 @@ static void map_delete_record(JSRuntime *rt, JSMapState *s, JSMapRecord *mr)
 {
     if (mr->empty)
         return;
-    List.delete(&mr->hash_link);
+    List.remove(&mr->hash_link);
     if (s->is_weak) {
         delete_weak_ref(rt, mr);
     } else {
@@ -45775,7 +45712,7 @@ static void map_delete_record(JSRuntime *rt, JSMapState *s, JSMapRecord *mr)
     }
     JS_FreeValueRT(rt, mr->value);
     if (--mr->ref_count == 0) {
-        List.delete(&mr->link);
+        List.remove(&mr->link);
         js_free_rt(rt, mr);
     } else {
         /* keep a zombie record for iterators */
@@ -45791,7 +45728,7 @@ static void map_decref_record(JSRuntime *rt, JSMapRecord *mr)
     if (--mr->ref_count == 0) {
         /* the record can be safely removed */
         assert(mr->empty);
-        List.delete(&mr->link);
+        List.remove(&mr->link);
         js_free_rt(rt, mr);
     }
 }
@@ -45807,8 +45744,8 @@ static void reset_weak_ref(JSRuntime *rt, JSObject *p)
         s = mr->map;
         assert(s->is_weak);
         assert(!mr->empty); /* no iterator on WeakMap/WeakSet */
-        List.delete(&mr->hash_link);
-        List.delete(&mr->link);
+        List.remove(&mr->hash_link);
+        List.remove(&mr->link);
     }
 
     /* second pass to free the values to avoid modifying the weak
@@ -46393,13 +46330,13 @@ static void fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
         args[3] = JS_NewBool(ctx, is_reject);
         args[4] = value;
         JS_EnqueueJob(ctx, promise_reaction_job, 5, args);
-        List.delete(&rd->link);
+        List.remove(&rd->link);
         promise_reaction_data_free(ctx->rt, rd);
     }
 
     list_for_each_safe(el, el1, &s->promise_reactions[1 - is_reject]) {
         rd = list_entry(el, JSPromiseReactionData, link);
-        List.delete(&rd->link);
+        List.remove(&rd->link);
         promise_reaction_data_free(ctx->rt, rd);
     }
 }
@@ -53177,7 +53114,7 @@ static void js_typed_array_finalizer(JSRuntime *rt, JSValue val)
         /* during the GC the finalizers are called in an arbitrary
            order so the ArrayBuffer finalizer may have been called */
         if (JS_IsLiveObject(rt, JS_MKPTR(JS_TAG_OBJECT, ta->buffer))) {
-            List.delete(&ta->link);
+            List.remove(&ta->link);
         }
         JS_FreeValueRT(rt, JS_MKPTR(JS_TAG_OBJECT, ta->buffer));
         js_free_rt(rt, ta);
@@ -53891,7 +53828,7 @@ static JSValue js_atomics_wait(JSContext *ctx,
                                      &ts);
     }
     if (waiter->linked)
-        List.delete(&waiter->link);
+        List.remove(&waiter->link);
     pthread_mutex_unlock(&js_atomics_mutex);
     pthread_cond_destroy(&waiter->cond);
     if (ret == ETIMEDOUT) {
@@ -53931,7 +53868,7 @@ static JSValue js_atomics_notify(JSContext *ctx,
         list_for_each_safe(el, el1, &js_atomics_waiter_list) {
             waiter = list_entry(el, JSAtomicsWaiter, link);
             if (waiter->ptr == ptr) {
-                List.delete(&waiter->link);
+                List.remove(&waiter->link);
                 waiter->linked = FALSE;
                 List.push(&waiter_list, &waiter->link);
                 n++;
@@ -53976,8 +53913,7 @@ void JS_AddIntrinsicAtomics(JSContext *ctx)
 
 #endif /* CONFIG_ATOMICS */
 
-void JS_AddIntrinsicTypedArrays(JSContext *ctx)
-{
+void JS_AddIntrinsicTypedArrays(JSContext *ctx) {
     JSValue typed_array_base_proto, typed_array_base_func;
     JSValueConst array_buffer_func, shared_array_buffer_func;
     int i;

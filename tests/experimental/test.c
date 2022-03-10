@@ -1,23 +1,34 @@
 #include <stdio.h>
-#include <stdint.h>
-#include <malloc.h>
+#include <assert.h>
+
 #include "quickjs/utils/list.h"
 
 int main(int argc, char *argv[], char *envp[]) {
-    ListNode* list = malloc(sizeof(ListNode));
+    ListNode* list = List.new();
+    ListNode* lz;
 
-    List.init(list);
-    ListNode n1[0x10];
-
-    for (size_t i = 0; i < sizeof(n1); ++i) {
-        List.unshift(list, &n1[i]);
+    for (size_t i = 0; i < 5; ++i) {
+        ListNode *n = List.new_node();
+        n->data.i8 = (char) (i + 'A');
+        List.push(list, lz = n);
         printf("%d\n", i);
     }
 
     size_t y = List.size(list);
     printf("Size: %d\n", y);
 
-    free(list);
+    size_t z = List.indexOf(list, lz);
+    printf("Index: %d\n", z);
+
+    List.reverse(list);
+
+    size_t zx = List.indexOf(list, lz);
+    printf("Index: %d\n", zx);
+
+    ListNode* zz = List.at(list, z);
+    assert(lz != zz);
+
+    List.destroy(list);
 
     return 0;
 }
