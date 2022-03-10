@@ -8,6 +8,7 @@
 #include <time.h>
 #include <fenv.h>
 #include <math.h>
+#include <errno.h>
 
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
@@ -95,7 +96,6 @@
 #ifdef CONFIG_ATOMICS
 #include <pthread.h>
 #include <stdatomic.h>
-#include <errno.h>
 #endif
 
 enum {
