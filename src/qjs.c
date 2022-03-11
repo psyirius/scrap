@@ -15,6 +15,8 @@
 #include <malloc/malloc.h>
 #elif defined(__linux__)
 #include <malloc.h>
+#elif defined(__FreeBSD__)
+#include <malloc_np.h>
 #endif
 
 #include "quickjs/utils/cutils.h"
@@ -30,7 +32,8 @@
 static int bignum_ext;
 #endif
 
-static int eval_buffer(JSContext *ctx, const void *buf, int buf_len, const char *filename, int eval_flags) {
+static
+int eval_buffer(JSContext *ctx, const void *buf, int buf_len, const char *filename, int eval_flags) {
     JSValue val;
     int ret;
 
@@ -46,17 +49,20 @@ static int eval_buffer(JSContext *ctx, const void *buf, int buf_len, const char 
     } else {
         val = JS_Eval(ctx, buf, buf_len, filename, eval_flags);
     }
+
     if (JS_IsException(val)) {
         js_std_dump_error(ctx);
         ret = -1;
     } else {
         ret = 0;
     }
+
     JS_FreeValue(ctx, val);
     return ret;
 }
 
-static int eval_file(JSContext *ctx, const char *filename, int module) {
+static
+int eval_file(JSContext *ctx, const char *filename, int module) {
     uint8_t *buf;
     int ret, eval_flags;
     size_t buf_len;
@@ -81,7 +87,8 @@ static int eval_file(JSContext *ctx, const char *filename, int module) {
 }
 
 /* also used to initialize the worker context */
-static JSContext *JS_NewCustomContext(JSRuntime *rt) {
+static
+JSContext* JS_NewCustomContext(JSRuntime *rt) {
     JSContext *ctx;
     ctx = JS_NewContext(rt);
     if (!ctx)
@@ -94,9 +101,11 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt) {
         JS_EnableBignumExt(ctx, TRUE);
     }
 #endif
+
     /* system modules */
     js_init_module_std(ctx, "std");
     js_init_module_os(ctx, "os");
+
     return ctx;
 }
 
@@ -106,17 +115,18 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt) {
 #define MALLOC_OVERHEAD  8
 #endif
 
-struct trace_malloc_data {
+typedef struct {
     uint8_t *base;
-};
+} trace_malloc_data;
 
-static inline unsigned long long js_trace_malloc_ptr_offset(uint8_t *ptr,
-                                                            struct trace_malloc_data *dp) {
+static inline
+uintptr_t js_trace_malloc_ptr_offset(uint8_t *ptr, trace_malloc_data *dp) {
     return ptr - dp->base;
 }
 
 /* default memory allocation functions with memory limitation */
-static inline size_t js_trace_malloc_usable_size(void *ptr) {
+static inline
+size_t js_trace_malloc_usable_size(void *ptr) {
 #if defined(__APPLE__)
     return malloc_size(ptr);
 #elif defined(_WIN32)
@@ -172,11 +182,13 @@ js_trace_malloc_printf(JSMallocState *s, const char *fmt, ...) {
     va_end(ap);
 }
 
-static void js_trace_malloc_init(struct trace_malloc_data *s) {
+static
+void js_trace_malloc_init(trace_malloc_data *s) {
     free(s->base = malloc(8));
 }
 
-static void *js_trace_malloc(JSMallocState *s, size_t size) {
+static
+void *js_trace_malloc(JSMallocState *s, size_t size) {
     void *ptr;
 
     /* Do not allocate zero bytes: behavior is platform dependent */
@@ -193,7 +205,8 @@ static void *js_trace_malloc(JSMallocState *s, size_t size) {
     return ptr;
 }
 
-static void js_trace_free(JSMallocState *s, void *ptr) {
+static
+void js_trace_free(JSMallocState *s, void *ptr) {
     if (!ptr)
         return;
 
@@ -203,7 +216,8 @@ static void js_trace_free(JSMallocState *s, void *ptr) {
     free(ptr);
 }
 
-static void *js_trace_realloc(JSMallocState *s, void *ptr, size_t size) {
+static
+void *js_trace_realloc(JSMallocState *s, void *ptr, size_t size) {
     size_t old_size;
 
     if (!ptr) {
@@ -232,7 +246,8 @@ static void *js_trace_realloc(JSMallocState *s, void *ptr, size_t size) {
     return ptr;
 }
 
-static const JSMallocFunctions trace_mf = {
+static
+const JSMallocFunctions trace_mf = {
         js_trace_malloc,
         js_trace_free,
         js_trace_realloc,
@@ -278,7 +293,7 @@ void help(void) {
 int main(int argc, char **argv) {
     JSRuntime *rt;
     JSContext *ctx;
-    struct trace_malloc_data trace_data = {NULL};
+    trace_malloc_data trace_data = {NULL};
     int optind;
     char *expr = NULL;
     int interactive = 0;
@@ -504,6 +519,7 @@ int main(int argc, char **argv) {
         JS_ComputeMemoryUsage(rt, &stats);
         JS_DumpMemoryUsage(stdout, &stats, rt);
     }
+
     js_std_free_handlers(rt);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
@@ -533,7 +549,8 @@ int main(int argc, char **argv) {
                best[1], best[2], best[3], best[4]);
     }
     return 0;
-    fail:
+
+fail:
     js_std_free_handlers(rt);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);

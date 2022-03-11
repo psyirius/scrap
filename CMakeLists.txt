@@ -9,6 +9,21 @@ file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/VERSION" QJS_VERSION)
 
 message("${PROJECT_NAME} v${QJS_VERSION}")
 
+function(print_list)
+    set(prefix ARG)
+
+    set(flags FLAGS)
+    set(labelValue LABEL)
+    set(filepathValues SOURCES LIST)
+
+    cmake_parse_arguments(${prefix} "${flags}" "${labelValue}" "${filepathValues}" ${ARGN})
+
+    message("${ARG_LABEL}:")
+    foreach(list_item ${ARG_LIST})
+        message("\t${list_item}")
+    endforeach()
+endfunction()
+
 set(QJS_LIB_DIR ${CMAKE_CURRENT_LIST_DIR}/lib)
 set(QJS_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
 set(QJS_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
@@ -69,18 +84,25 @@ target_link_libraries(${QJS_COMPILER_TARGET} PRIVATE ${QJS_CORE_TARGET})
 set(QJSC_GENERATED_DIR ${QJS_GENERATED_DIR}/qjsc)
 
 add_custom_command(
-    OUTPUT ${QJSC_GENERATED_DIR}/repl.c ${QJSC_GENERATED_DIR}/calc.c
-    # Compile repl.js into repl.c
+    OUTPUT ${QJSC_GENERATED_DIR}/repl.c ${QJSC_GENERATED_DIR}/calc.c ${QJSC_GENERATED_DIR}/test.c
+    # Compile repl.js into repl.c as a module
     COMMAND qjsc -c -o ${QJSC_GENERATED_DIR}/repl.c -m ${QJS_LIB_DIR}/repl.js
-    # Compile calc.js into calc.c
-    COMMAND qjsc -c -o ${QJSC_GENERATED_DIR}/calc.c -m ${QJS_LIB_DIR}/calc.js
+
+    # Compile calc.js into calc.c not as a module with bignum
+    COMMAND qjsc -fbignum -c -o ${QJSC_GENERATED_DIR}/calc.c ${QJS_LIB_DIR}/calc.js
+
+    # Compile test.js into test.c as a module
+    COMMAND qjsc -c -o ${QJSC_GENERATED_DIR}/test.c -m ${QJS_LIB_DIR}/test.js
     DEPENDS ${QJS_COMPILER_TARGET}
 )
 
 set(QJSC_GENERATED_SOURCES
     ${QJSC_GENERATED_DIR}/repl.c
     ${QJSC_GENERATED_DIR}/calc.c
+    ${QJSC_GENERATED_DIR}/test.c
 )
+
+print_list(LABEL "QJsc Generated Sources:" LIST ${QJSC_GENERATED_SOURCES})
 
 # QuickJS interpreter.
 set(QJS_INTERPRETER_TARGET qjs)

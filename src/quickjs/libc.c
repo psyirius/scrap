@@ -553,8 +553,7 @@ int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
     return 0;
 }
 
-JSModuleDef *js_module_loader(JSContext *ctx,
-                              const char *module_name, void *opaque) {
+JSModuleDef *js_module_loader(JSContext *ctx, const char *module_name, void *opaque) {
     JSModuleDef *m;
 
     if (has_suffix(module_name, ".so")) {
@@ -3621,8 +3620,7 @@ void js_std_add_helpers(JSContext *ctx, int argc, char **argv) {
     global_obj = JS_GetGlobalObject(ctx);
 
     console = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, console, "log",
-                      JS_NewCFunction(ctx, js_print, "log", 1));
+    JS_SetPropertyStr(ctx, console, "log", JS_NewCFunction(ctx, js_print, "log", 1));
     JS_SetPropertyStr(ctx, global_obj, "console", console);
 
     /* same methods as the mozilla JS shell */
@@ -3634,10 +3632,8 @@ void js_std_add_helpers(JSContext *ctx, int argc, char **argv) {
         JS_SetPropertyStr(ctx, global_obj, "scriptArgs", args);
     }
 
-    JS_SetPropertyStr(ctx, global_obj, "print",
-                      JS_NewCFunction(ctx, js_print, "print", 1));
-    JS_SetPropertyStr(ctx, global_obj, "__loadScript",
-                      JS_NewCFunction(ctx, js_loadScript, "__loadScript", 1));
+    JS_SetPropertyStr(ctx, global_obj, "print", JS_NewCFunction(ctx, js_print, "print", 1));
+    JS_SetPropertyStr(ctx, global_obj, "__loadScript", JS_NewCFunction(ctx, js_loadScript, "__loadScript", 1));
 
     JS_FreeValue(ctx, global_obj);
 }
@@ -3650,6 +3646,7 @@ void js_std_init_handlers(JSRuntime *rt) {
         fprintf(stderr, "Could not allocate memory for the worker");
         exit(1);
     }
+
     memset(ts, 0, sizeof(*ts));
     List.ctor(&ts->os_rw_handlers);
     List.ctor(&ts->os_signal_handlers);
@@ -3767,11 +3764,12 @@ void js_std_loop(JSContext *ctx) {
     }
 }
 
-void js_std_eval_binary(JSContext *ctx, const uint8_t *buf, size_t buf_len, int load_only) {
-    JSValue obj, val;
-    obj = JS_ReadObject(ctx, buf, buf_len, JS_READ_OBJ_BYTECODE);
+void js_std_eval_binary(JSContext* ctx, const uint8_t* buf, size_t buf_len, int load_only) {
+    JSValue obj = JS_ReadObject(ctx, buf, buf_len, JS_READ_OBJ_BYTECODE);
+
     if (JS_IsException(obj))
         goto exception;
+
     if (load_only) {
         if (JS_VALUE_GET_TAG(obj) == JS_TAG_MODULE) {
             js_module_set_import_meta(ctx, obj, FALSE, FALSE);
@@ -3784,9 +3782,10 @@ void js_std_eval_binary(JSContext *ctx, const uint8_t *buf, size_t buf_len, int 
             }
             js_module_set_import_meta(ctx, obj, FALSE, TRUE);
         }
-        val = JS_EvalFunction(ctx, obj);
+
+        JSValue val = JS_EvalFunction(ctx, obj);
         if (JS_IsException(val)) {
-            exception:
+exception:
             js_std_dump_error(ctx);
             exit(1);
         }

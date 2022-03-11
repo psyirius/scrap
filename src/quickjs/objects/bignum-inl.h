@@ -1706,8 +1706,7 @@ static const JSCFunctionListEntry js_bigdecimal_funcs[] = {
         JS_CFUNC_MAGIC_DEF("sqrt", 1, js_bigdecimal_fop, MATH_OP_SQRT ),
 };
 
-void JS_AddIntrinsicBigDecimal(JSContext *ctx)
-{
+void JS_AddIntrinsicBigDecimal(JSContext *ctx) {
     JSRuntime *rt = ctx->rt;
     JSValueConst obj1;
 

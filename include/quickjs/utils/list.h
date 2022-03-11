@@ -3,6 +3,8 @@
  */
 #pragma once
 
+#include "quickjs/config.h"
+
 #include "quickjs/macros/struct.h"
 #include "quickjs/macros/types.h"
 #include "quickjs/macros/function.h"

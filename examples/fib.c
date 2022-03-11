@@ -1,7 +1,7 @@
 /*
  * QuickJS: Example of C module
  */
-#include "quickjs//quickjs.h"
+#include "quickjs/quickjs.h"
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -28,8 +28,7 @@ static const JSCFunctionListEntry js_fib_funcs[] = {
 };
 
 static int js_fib_init(JSContext *ctx, JSModuleDef *m) {
-    return JS_SetModuleExportList(ctx, m, js_fib_funcs,
-                                  countof(js_fib_funcs));
+    return JS_SetModuleExportList(ctx, m, js_fib_funcs, countof(js_fib_funcs));
 }
 
 #ifdef JS_SHARED_LIBRARY
@@ -39,10 +38,8 @@ static int js_fib_init(JSContext *ctx, JSModuleDef *m) {
 #endif
 
 JSModuleDef *JS_INIT_MODULE(JSContext *ctx, const char *module_name) {
-    JSModuleDef *m;
-    m = JS_NewCModule(ctx, module_name, js_fib_init);
-    if (!m)
-        return NULL;
+    JSModuleDef *m = JS_NewCModule(ctx, module_name, js_fib_init);
+    if (!m) return NULL;
     JS_AddModuleExportList(ctx, m, js_fib_funcs, countof(js_fib_funcs));
     return m;
 }

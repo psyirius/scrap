@@ -194,7 +194,7 @@ ListNode* list_swap_links(ListNode *elem, ListNode *prev) {
 }
 
 IMPL_METHOD(reverse, void) {
-    size_t size = REF_METHOD(size)(self);
+    DBG_EXPR(size_t size = REF_METHOD(size)(self));
 
     ListNode *elem = self->next;
     ListNode *next, *prev = elem->prev;

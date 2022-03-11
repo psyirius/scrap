@@ -24,6 +24,10 @@
 
 #define CMD_NAME "run-test262"
 
+/* return the pointer of type 'type *' containing 'elem' as field 'member' */
+#define list_entry(elem, type, member) \
+    ((type*)((uint8_t*)(elem) - offsetof(type, member)))
+
 typedef struct namelist_t {
     char **array;
     int count;
@@ -404,11 +408,11 @@ static void add_helpers(JSContext *ctx);
 static pthread_mutex_t agent_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t agent_cond = PTHREAD_COND_INITIALIZER;
 /* list of Test262Agent.link */
-static ListNode agent_list = LIST_HEAD_INIT(agent_list);
+static ListNode agent_list = list_init(agent_list);
 
 static pthread_mutex_t report_mutex = PTHREAD_MUTEX_INITIALIZER;
 /* list of AgentReport.link */
-static ListNode report_list = LIST_HEAD_INIT(report_list);
+static ListNode report_list = list_init(report_list);
 
 static void *agent_start(void *arg) {
     Test262Agent *agent = arg;
