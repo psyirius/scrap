@@ -7,7 +7,7 @@ set(CMAKE_VERBOSE_MAKEFILE  on)
 
 file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/VERSION" QJS_VERSION)
 
-message("${PROJECT_NAME} v${QJS_VERSION}")
+message(STATUS "${PROJECT_NAME} v${QJS_VERSION}")
 
 function(print_list)
     set(prefix ARG)

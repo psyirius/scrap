@@ -18,6 +18,10 @@
 #include <malloc_np.h>
 #endif
 
+#ifndef INFINITY
+#define INFINITY 1.0 / 0.0
+#endif
+
 #include "quickjs/quickjs.h"
 
 #include "quickjs/utils/cutils.h"

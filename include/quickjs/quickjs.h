@@ -6,6 +6,11 @@
 
 #include "config.h"
 
+#if defined(__ANDROID__)
+#include <android/log.h>
+#define printf(...) __android_log_print(ANDROID_LOG_INFO, "qjs", __VA_ARGS__)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -891,6 +896,8 @@ JSValue JS_NewObjectProto(JSContext *ctx, JSValueConst proto);
 JSValue JS_NewObject(JSContext *ctx);
 
 JS_BOOL JS_IsFunction(JSContext *ctx, JSValueConst val);
+
+JS_BOOL JS_IsPromise(JSContext* ctx, JSValueConst val);
 
 JS_BOOL JS_IsConstructor(JSContext *ctx, JSValueConst val);
 
