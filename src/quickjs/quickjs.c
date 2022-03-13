@@ -18,7 +18,7 @@
 #include <malloc_np.h>
 #endif
 
-#ifndef INFINITY
+#if !defined(_WIN32) && !defined(INFINITY)
 #define INFINITY 1.0 / 0.0
 #endif
 

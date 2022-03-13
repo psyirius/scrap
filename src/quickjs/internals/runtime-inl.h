@@ -8850,11 +8850,7 @@ static JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
             } else
 #endif
             {
-#ifdef _MSC_VER
                 double d = INFINITY;
-#else
-                double d = 1.0 / 0.0;
-#endif
                 if (is_neg)
                     d = -d;
                 val = JS_NewFloat64(ctx, d);
