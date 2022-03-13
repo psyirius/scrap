@@ -1,4 +1,3 @@
-# Editor configuration, see https://editorconfig.org for more details.
 root = true
 
 [*.{c,h,cpp,hpp}]
