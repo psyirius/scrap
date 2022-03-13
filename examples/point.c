@@ -7,7 +7,6 @@
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
 /* Point Class */
-
 typedef struct {
     int x;
     int y;

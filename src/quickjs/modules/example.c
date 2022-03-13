@@ -1,40 +1,142 @@
 #include "quickjs/modules/example.h"
 
+#include <math.h>
+
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
+/* Point Class */
+typedef struct {
+    int x;
+    int y;
+} JSPointData;
+
+static JSClassID js_point_class_id;
+
+// Point::~Point()
 static
-int64_t fib(int64_t n) {
-    switch (n) {
-        case -1:
-        case 0: return 0;
-        case 1: return n;
-        default:
-            return fib(n - 1) + fib(n - 2);
-    }
+void js_point_finalizer(JSRuntime *rt, JSValue val) {
+    JSPointData *s = JS_GetOpaque(val, js_point_class_id);
+    /* Note: 's' can be NULL in case JS_SetOpaque() was not called */
+    js_free_rt(rt, s);
 }
 
+// Point::Point()
 static
-JSValue js_fib(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    int64_t n, res;
-    if (JS_ToInt64(ctx, &n, argv[0]))
+JSValue js_point_ctor(JSContext *ctx, JSValueConst self, int argc, JSValueConst *argv) {
+    if (argc != 2)
+        return JS_ThrowTypeError(ctx, "invalid number of arguments. Expected 2!");
+    JSValue obj = JS_UNDEFINED;
+    JSPointData* s = js_mallocz(ctx, sizeof(JSPointData));
+    if (!s)
         return JS_EXCEPTION;
-    res = fib(n);
-    return JS_NewInt64(ctx, res);
+    if (JS_ToInt32(ctx, &s->x, argv[0]))
+        goto fail;
+    if (JS_ToInt32(ctx, &s->y, argv[1]))
+        goto fail;
+    /* using new_target to get the prototype is necessary when the
+       class is extended. */
+    JSValue proto = JS_GetPropertyStr(ctx, self, "prototype");
+    if (JS_IsException(proto))
+        goto fail;
+    obj = JS_NewObjectProtoClass(ctx, proto, js_point_class_id);
+    JS_FreeValue(ctx, proto);
+    if (JS_IsException(obj))
+        goto fail;
+    JS_SetOpaque(obj, s);
+
+    return obj;
+
+fail:
+    js_free(ctx, s);
+    JS_FreeValue(ctx, obj);
+
+    return JS_EXCEPTION;
+}
+
+// Point::get x(), Point::get y()
+static
+JSValue js_point_get_xy(JSContext *ctx, JSValueConst this_val, int magic) {
+    JSPointData *s = JS_GetOpaque2(ctx, this_val, js_point_class_id);
+    if (!s)
+        return JS_EXCEPTION;
+    if (magic == 0)
+        return JS_NewInt32(ctx, s->x);
+    else
+        return JS_NewInt32(ctx, s->y);
+}
+
+// Point::set x(), Point::set y()
+static
+JSValue js_point_set_xy(JSContext *ctx, JSValueConst this_val, JSValue val, int magic) {
+    JSPointData *s = JS_GetOpaque2(ctx, this_val, js_point_class_id);
+    int v;
+    if (!s)
+        return JS_EXCEPTION;
+    if (JS_ToInt32(ctx, &v, val))
+        return JS_EXCEPTION;
+    if (magic == 0)
+        s->x = v;
+    else
+        s->y = v;
+    return JS_UNDEFINED;
+}
+
+// Point::norm()
+static
+JSValue js_point_norm(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+    JSPointData *s = JS_GetOpaque2(ctx, this_val, js_point_class_id);
+    if (!s) return JS_EXCEPTION;
+    return JS_NewFloat64(ctx, sqrt((double) s->x * s->x + (double) s->y * s->y));
+}
+
+// Point::toString()
+static
+JSValue js_point_toString(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+    JSPointData* s = JS_GetOpaque2(ctx, this_val, js_point_class_id);
+    if (!s) return JS_EXCEPTION;
+    char str[0x100];
+    sprintf(str, "Point { x: %d, y: %d }", s->x, s->y);
+    return JS_NewString(ctx, str);
 }
 
 static
-const JSCFunctionListEntry js_fib_funcs[] = {
-    JS_CFUNC_DEF("fib", 1, js_fib),
+JSClassDef js_point_class = {
+    .class_name = "Point",
+    .finalizer = js_point_finalizer,
 };
 
 static
-int js_fib_init(JSContext *ctx, JSModuleDef *m) {
-    return JS_SetModuleExportList(ctx, m, js_fib_funcs, countof(js_fib_funcs));
+const JSCFunctionListEntry js_point_proto_funcs[] = {
+    JS_CGETSET_MAGIC_DEF("x", js_point_get_xy, js_point_set_xy, 0),
+    JS_CGETSET_MAGIC_DEF("y", js_point_get_xy, js_point_set_xy, 1),
+    JS_CFUNC_DEF("norm", 0, js_point_norm),
+    JS_CFUNC_DEF("toString", 0, js_point_toString),
+};
+
+static
+int js_point_init(JSContext* ctx, JSModuleDef* m) {
+    /* Create the Point class */
+    JS_NewClassID(&js_point_class_id);
+
+    JS_NewClass(JS_GetRuntime(ctx), js_point_class_id, &js_point_class);
+
+    JSValue point_proto = JS_NewObject(ctx);
+    JS_SetPropertyFunctionList(ctx, point_proto, js_point_proto_funcs, countof(js_point_proto_funcs));
+
+    JSValue point_class = JS_NewCFunction2(ctx, js_point_ctor, "Point", 2, JS_CFUNC_constructor, 0);
+
+    /* set proto.constructor and ctor.prototype */
+    JS_SetConstructor(ctx, point_class, point_proto);
+    JS_SetClassProto(ctx, js_point_class_id, point_proto);
+
+    JS_SetModuleExport(ctx, m, "Point", point_class);
+
+    return 0;
 }
 
-JSModuleDef *js_init_module_example(JSContext *ctx, const char *module_name) {
-    JSModuleDef *m = JS_NewCModule(ctx, module_name, js_fib_init);
+JSModuleDef* js_init_module_example(JSContext *ctx, const char *module_name) {
+    JSModuleDef* m = JS_NewCModule(ctx, module_name, js_point_init);
     if (!m) return NULL;
-    JS_AddModuleExportList(ctx, m, js_fib_funcs, countof(js_fib_funcs));
+    JS_AddModuleExport(ctx, m, "Point");
     return m;
 }

@@ -1143,29 +1143,22 @@ typedef struct JSCFunctionListEntry {
 #define JS_ALIAS_DEF(name, from) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_ALIAS, 0, .u = { .alias = { from, -1 } } }
 #define JS_ALIAS_BASE_DEF(name, from, base) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_ALIAS, 0, .u = { .alias = { from, base } } }
 
-void JS_SetPropertyFunctionList(JSContext *ctx, JSValueConst obj,
-                                const JSCFunctionListEntry *tab,
-                                int len);
+void JS_SetPropertyFunctionList(JSContext *ctx, JSValueConst obj, const JSCFunctionListEntry *tab, int len);
 
 /* C module definition */
-
 typedef int JSModuleInitFunc(JSContext *ctx, JSModuleDef *m);
 
-JSModuleDef *JS_NewCModule(JSContext *ctx, const char *name_str,
-                           JSModuleInitFunc *func);
+JSModuleDef *JS_NewCModule(JSContext *ctx, const char *name_str, JSModuleInitFunc *func);
 
 /* can only be called before the module is instantiated */
 int JS_AddModuleExport(JSContext *ctx, JSModuleDef *m, const char *name_str);
 
-int JS_AddModuleExportList(JSContext *ctx, JSModuleDef *m,
-                           const JSCFunctionListEntry *tab, int len);
+int JS_AddModuleExportList(JSContext *ctx, JSModuleDef *m, const JSCFunctionListEntry *tab, int len);
 
 /* can only be called after the module is instantiated */
-int JS_SetModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name,
-                       JSValue val);
+int JS_SetModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name, JSValue val);
 
-int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m,
-                           const JSCFunctionListEntry *tab, int len);
+int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m, const JSCFunctionListEntry *tab, int len);
 
 #undef js_unlikely
 #undef js_force_inline
