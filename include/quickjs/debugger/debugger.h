@@ -7,23 +7,25 @@
 extern "C" {
 #endif
 
-typedef struct JSDebuggerFunctionInfo {
+typedef struct {
     // same length as byte_code_buf.
     uint8_t *breakpoints;
     uint32_t dirty;
     int last_line_num;
 } JSDebuggerFunctionInfo;
 
-typedef struct JSDebuggerLocation {
+typedef struct {
     JSAtom filename;
     int line;
     int column;
 } JSDebuggerLocation;
 
-#define JS_DEBUGGER_STEP 1
-#define JS_DEBUGGER_STEP_IN 2
-#define JS_DEBUGGER_STEP_OUT 3
-#define JS_DEBUGGER_STEP_CONTINUE 4
+typedef enum {
+    JS_DEBUGGER_STEP = 1,
+    JS_DEBUGGER_STEP_IN = 2,
+    JS_DEBUGGER_STEP_OUT = 3,
+    JS_DEBUGGER_STEP_CONTINUE = 4,
+} JsDebuggerStepType;
 
 typedef struct JSDebuggerInfo {
     // JSContext that is used to for the JSON transport and debugger state.
@@ -43,6 +45,7 @@ typedef struct JSDebuggerInfo {
     size_t (*transport_write)(void *udata, const char* buffer, size_t length);
     size_t (*transport_peek)(void *udata);
     void (*transport_close)(JSRuntime* rt, void *udata);
+
     void *transport_udata;
 
     JSValue breakpoints;
@@ -58,7 +61,6 @@ void js_debugger_free_context(JSContext *ctx);
 void js_debugger_check(JSContext *ctx, const uint8_t *pc);
 void js_debugger_exception(JSContext* ctx);
 void js_debugger_free(JSRuntime *rt, JSDebuggerInfo *info);
-
 void js_debugger_attach(
         JSContext* ctx,
         size_t (*transport_read)(void *udata, char* buffer, size_t length),

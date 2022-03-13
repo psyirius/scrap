@@ -565,7 +565,7 @@ void js_debugger_check(JSContext* ctx, const uint8_t *cur_pc) {
     if (info->transport_close == NULL)
         goto done;
 
-    struct JSDebuggerLocation location;
+    JSDebuggerLocation location;
     int depth;
 
     // perform stepping checks prior to the breakpoint check
@@ -606,7 +606,7 @@ void js_debugger_check(JSContext* ctx, const uint8_t *cur_pc) {
             // or
             // break if the stack unwinds
             if (info->step_depth == depth) {
-                struct JSDebuggerLocation location = js_debugger_current_location(ctx, cur_pc);
+                JSDebuggerLocation location = js_debugger_current_location(ctx, cur_pc);
                 if (location.filename == info->step_over.filename
                     && location.line == info->step_over.line
                     && location.column == info->step_over.column)
@@ -625,7 +625,7 @@ void js_debugger_check(JSContext* ctx, const uint8_t *cur_pc) {
             js_send_stopped_event(info, "stepOut");
         }
         else if (info->stepping == JS_DEBUGGER_STEP) {
-            struct JSDebuggerLocation location = js_debugger_current_location(ctx, cur_pc);
+            JSDebuggerLocation location = js_debugger_current_location(ctx, cur_pc);
             // to step over, need to make sure the location changes,
             // and that the location change isn't into a function call (deeper stack).
             if ((location.filename == info->step_over.filename
