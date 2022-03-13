@@ -84,6 +84,7 @@ DEF_STRUCT(ListPrototype) {
     DEF_METHOD(insert_at, bool, ListNode* node, size_t index);
     DEF_METHOD(push, void, ListNode* node);
     DEF_METHOD(unshift, void, ListNode* node);
+    DEF_METHOD(splice, bool, ListNode* list);
     DEF_STATIC_METHOD(remove, void, ListNode* node);
     DEF_STATIC_METHOD(delete, void, ListNode* node);
     DEF_METHOD(reverse, void);
