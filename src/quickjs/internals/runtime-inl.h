@@ -713,6 +713,8 @@ void JS_SetRuntimeInfo(JSRuntime *rt, const char *s)
 
 void JS_FreeRuntime(JSRuntime *rt)
 {
+    js_debugger_free(rt, &rt->debugger_info);
+
     ListNode *el, *el1;
     int i;
 
@@ -932,6 +934,9 @@ JSContext *JS_NewContextRaw(JSRuntime *rt)
     List.ctor(&ctx->loaded_modules);
 
     JS_AddIntrinsicBasicObjects(ctx);
+
+    js_debugger_new_context(ctx);
+
     return ctx;
 }
 
@@ -1092,6 +1097,8 @@ void JS_FreeContext(JSContext *ctx)
         JS_DumpMemoryUsage(stdout, &stats, rt);
     }
 #endif
+
+    js_debugger_free_context(ctx);
 
     js_free_modules(ctx, JS_FREE_MODULE_ALL);
 
@@ -4843,6 +4850,7 @@ JSValue JS_Throw(JSContext *ctx, JSValue obj)
     JSRuntime *rt = ctx->rt;
     JS_FreeValue(ctx, rt->current_exception);
     rt->current_exception = obj;
+    js_debugger_exception(ctx);
     return JS_EXCEPTION;
 }
 
@@ -4984,7 +4992,7 @@ static const char *get_func_name(JSContext *ctx, JSValueConst func)
 
 /* if filename != NULL, an additional level is added with the filename
    and line number information (used for parse error). */
-static 
+static
 void build_backtrace(JSContext *ctx, JSValueConst error_obj, const char *filename, int line_num, int backtrace_flags) {
     JSStackFrame *sf;
     JSValue str;
@@ -14533,7 +14541,7 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
 
 #if !DIRECT_DISPATCH
     #define SWITCH(pc)      switch (opcode = *pc++)
-#define CASE(op)        case op
+#define CASE(op)        case op: if (caller_ctx->rt->debugger_info.transport_close) js_debugger_check(ctx, pc); stub_ ## op
 #define DEFAULT         default
 #define BREAK           break
 #else
@@ -14547,10 +14555,23 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
 #include "quickjs/quickjs-opcode.h"
             [ OP_COUNT ... 255 ] = &&case_default
     };
-#define SWITCH(pc)      goto *dispatch_table[opcode = *pc++];
-#define CASE(op)        case_ ## op
+    static const void * const debugger_dispatch_table[256] = {
+#define DEF(id, size, n_pop, n_push, f) && case_debugger_OP_ ## id,
+#if SHORT_OPCODES
+#define def(id, size, n_pop, n_push, f)
+#else
+#define def(id, size, n_pop, n_push, f) && case_default,
+#endif
+#include "quickjs/quickjs-opcode.h"
+        [ OP_COUNT ... 255 ] = &&case_default
+    };
+#define SWITCH(pc)      goto *active_dispatch_table[opcode = *pc++];
+#define CASE(op)        case_debugger_ ## op: js_debugger_check(ctx, pc); case_ ## op
 #define DEFAULT         case_default
 #define BREAK           SWITCH(pc)
+
+    const void * const * active_dispatch_table = caller_ctx->rt->debugger_info.transport_close
+        ? debugger_dispatch_table : dispatch_table;
 #endif
 
     if (js_poll_interrupts(caller_ctx))
@@ -14640,6 +14661,8 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
     for(;;) {
         int call_argc;
         JSValue *call_argv;
+
+        js_debugger_check(ctx, NULL);
 
         SWITCH(pc) {
             CASE(OP_push_i32):

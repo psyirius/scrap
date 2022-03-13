@@ -10134,13 +10134,23 @@ static __exception int add_closure_variables(JSContext *ctx, JSFunctionDef *s,
     if (!s->closure_var)
         return -1;
     /* Add lexical variables in scope at the point of evaluation */
-    for (i = scope_idx; i >= 0;) {
-        vd = &b->vardefs[b->arg_count + i];
-        if (vd->scope_level > 0) {
-            JSClosureVar *cv = &s->closure_var[s->closure_var_count++];
-            set_closure_from_var(ctx, cv, vd, i);
+    if(scope_idx == DEBUG_SCOP_INDEX) {
+        for (i = 0; i < b->var_count; i++) {
+            vd = &b->vardefs[b->arg_count + i];
+            if (vd->scope_level > 0) {
+                JSClosureVar *cv = &s->closure_var[s->closure_var_count++];
+                set_closure_from_var(ctx, cv, vd, i);
+            }
         }
-        i = vd->scope_next;
+    } else {
+        for (i = scope_idx; i >= 0;) {
+            vd = &b->vardefs[b->arg_count + i];
+            if (vd->scope_level > 0) {
+                JSClosureVar *cv = &s->closure_var[s->closure_var_count++];
+                set_closure_from_var(ctx, cv, vd, i);
+            }
+            i = vd->scope_next;
+        }
     }
     is_arg_scope = (i == ARG_SCOPE_END);
     if (!is_arg_scope) {
@@ -10589,7 +10599,8 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
         next: ;
     }
 
-    line_num = 0; /* avoid warning */
+    /* init with function start line to ensure generate a valid last line for one-line function */
+    line_num = s->line_num;
     for (pos = 0; pos < bc_len; pos = pos_next) {
         op = bc_buf[pos];
         len = opcode_info[op].size;
@@ -10725,9 +10736,17 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
                     /* remove dead code */
                     int line = -1;
                     dbuf_put(&bc_out, bc_buf + pos, len);
-                    pos = skip_dead_code(s, bc_buf, bc_len, pos + len, &line);
+                    if(pos + len < bc_len)
+                        pos = skip_dead_code(s, bc_buf, bc_len, pos + len, &line);
+                    else {
+                        //NOTE: already arrive the function end, give a valid value to save line num.
+                        pos += len;
+                        line = line_num + 1;
+                    }
+
                     pos_next = pos;
-                    if (pos < bc_len && line >= 0 && line_num != line) {
+                    //NOTE: use <= instead of < to allow we save the last line num
+                    if (pos <= bc_len && line >= 0 && line_num != line) {
                         line_num = line;
                         s->line_number_size++;
                         dbuf_putc(&bc_out, OP_line_num);
@@ -12468,6 +12487,9 @@ static void free_function_bytecode(JSRuntime *rt, JSFunctionBytecode *b)
         JS_FreeAtomRT(rt, b->debug.filename);
         js_free_rt(rt, b->debug.pc2line_buf);
         js_free_rt(rt, b->debug.source);
+
+        if (b->debugger.breakpoints)
+            js_free_rt(rt, b->debugger.breakpoints);
     }
 
     remove_gc_object(&b->header);

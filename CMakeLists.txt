@@ -73,7 +73,7 @@ if (UNIX)
     target_link_libraries(${QJS_CORE_TARGET} PRIVATE m dl pthread)
 else()
     set(LIB_WIN_PTHREAD_STATIC -static winpthread)
-    target_link_libraries(${QJS_CORE_TARGET} PRIVATE ${LIB_WIN_PTHREAD_STATIC})
+    target_link_libraries(${QJS_CORE_TARGET} PRIVATE ${LIB_WIN_PTHREAD_STATIC} ws2_32)
 endif()
 
 # QuickJS compiler.

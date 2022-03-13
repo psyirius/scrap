@@ -28,6 +28,8 @@
 #include "quickjs/utils/list.h"
 #include "quickjs/utils/libregexp.h"
 
+#include "quickjs/debugger/debugger.h"
+
 /* return the pointer of type 'type *' containing 'elem' as field 'member' */
 #define list_entry(elem, type, member) \
     ((type*)((uint8_t*)(elem) - offsetof(type, member)))
@@ -106,7 +108,7 @@
 struct timezone;
 
  /* From: https://stackoverflow.com/a/26085827 */
-static 
+static
 int gettimeofday(struct timeval *tp, struct timezone *tzp) {
     static const uint64_t EPOCH = (uint64_t)116444736000000000ULL;
     SYSTEMTIME system_time;
@@ -312,6 +314,8 @@ struct JSRuntime {
     uint32_t operator_count;
 #endif
     void *user_opaque;
+
+    JSDebuggerInfo debugger_info;
 };
 
 typedef struct {
@@ -537,6 +541,7 @@ typedef struct JSClosureVar {
 
 #define ARG_SCOPE_INDEX 1
 #define ARG_SCOPE_END (-2)
+#define DEBUG_SCOP_INDEX (-3)
 
 typedef struct JSVarScope {
     int parent;  /* index into fd->scopes of the enclosing scope */
@@ -639,6 +644,7 @@ typedef struct JSFunctionBytecode {
         uint8_t *pc2line_buf;
         char *source;
     } debug;
+    struct JSDebuggerFunctionInfo debugger;
 } JSFunctionBytecode;
 
 typedef struct JSBoundFunction {
@@ -1389,3 +1395,6 @@ JSValue js___date_clock(JSContext *ctx, JSValueConst this_val, int argc, JSValue
 
 /* Atomics */
 #include "./objects/atomic-inl.h"
+
+/* Debugger */
+#include "./debugger/debugger-inl.h"
