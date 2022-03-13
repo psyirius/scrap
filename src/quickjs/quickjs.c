@@ -8,16 +8,14 @@
 #include <fenv.h>
 #include <math.h>
 #include <errno.h>
+#include <sys/time.h>
 
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
-#include <sys/time.h>
 #elif defined(__linux__)
 #include <malloc.h>
-#include <sys/time.h>
 #elif defined(__FreeBSD__)
 #include <malloc_np.h>
-#include <sys/time.h>
 #endif
 
 #include "quickjs/quickjs.h"
