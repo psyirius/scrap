@@ -8,7 +8,10 @@
 #include <fenv.h>
 #include <math.h>
 #include <errno.h>
+
+#ifndef _WIN32
 #include <sys/time.h>
+#endif
 
 #if defined(__APPLE__)
 #include <malloc/malloc.h>

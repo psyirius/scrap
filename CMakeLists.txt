@@ -51,15 +51,17 @@ add_library(${QJS_CORE_TARGET} STATIC ${QJS_CORE_HEADERS} ${QJS_CORE_SOURCES})
 
 target_include_directories(${QJS_CORE_TARGET} PUBLIC ${QJS_INCLUDE_DIR})
 
-target_compile_options(${QJS_CORE_TARGET} PRIVATE
-    -Os -s
-    -MMD -MF
-    -Wno-sign-compare
-    -Wno-missing-field-initializers
-    -Wunused -Wno-unused-parameter
-    -Wundef -Wuninitialized -Wwrite-strings
-    -Wchar-subscripts -funsigned-char
-)
+if (!MSVC)
+    target_compile_options(${QJS_CORE_TARGET} PRIVATE
+            -Os -s
+            -MMD -MF
+            -Wno-sign-compare
+            -Wno-missing-field-initializers
+            -Wunused -Wno-unused-parameter
+            -Wundef -Wuninitialized -Wwrite-strings
+            -Wchar-subscripts -funsigned-char
+            )
+endif()
 
 target_compile_definitions(${QJS_CORE_TARGET} PUBLIC
     CONFIG_VERSION="${QJS_VERSION}"

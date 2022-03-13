@@ -1,10 +1,14 @@
-#include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 
 #include <winsock2.h>
+#include "quickjs/utils/cutils.h"
+
+#ifndef _MSC_VER
+#include <unistd.h>
+#endif
 
 struct js_transport_data {
     int handle;
