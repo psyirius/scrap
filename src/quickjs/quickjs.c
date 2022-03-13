@@ -34,7 +34,7 @@
 
 #define OPTIMIZE         1
 #define SHORT_OPCODES    1
-#if defined(EMSCRIPTEN)
+#if defined(EMSCRIPTEN) || defined(_MSC_VER)
 #define DIRECT_DISPATCH  0
 #else
 #define DIRECT_DISPATCH  1
@@ -53,11 +53,11 @@
 
 /* define to include Atomics.* operations which depend on the OS
    threads */
-#if !defined(EMSCRIPTEN)
+#if !defined(EMSCRIPTEN) && !defined(_MSC_VER)
 #define CONFIG_ATOMICS
 #endif
 
-#if !defined(EMSCRIPTEN)
+#if !defined(EMSCRIPTEN) && !defined(_MSC_VER)
 /* enable stack limitation */
 #define CONFIG_STACK_CHECK
 #endif
@@ -96,6 +96,29 @@
 #ifdef CONFIG_ATOMICS
 #include <pthread.h>
 #include <stdatomic.h>
+#endif
+
+#ifdef _MSC_VER
+struct timezone;
+
+ /* From: https://stackoverflow.com/a/26085827 */
+static 
+int gettimeofday(struct timeval *tp, struct timezone *tzp) {
+    static const uint64_t EPOCH = (uint64_t)116444736000000000ULL;
+    SYSTEMTIME system_time;
+    FILETIME file_time;
+    uint64_t time;
+
+    GetSystemTime(&system_time);
+    SystemTimeToFileTime(&system_time, &file_time);
+    time = (uint64_t)file_time.dwLowDateTime;
+    time += ((uint64_t)file_time.dwHighDateTime) << 32;
+
+    tp->tv_sec = (long)((time - EPOCH) / 10000000L);
+    tp->tv_usec = (long)(system_time.wMilliseconds * 1000);
+
+    return 0;
+}
 #endif
 
 enum {
@@ -251,6 +274,8 @@ struct JSRuntime {
     JSValue current_exception;
     /* true if inside an out of memory error, to avoid recursing */
     BOOL in_out_of_memory : 8;
+    /* and likewise if inside Error.prepareStackTrace() */
+    BOOL in_prepare_stack_trace : 8;
 
     struct JSStackFrame *current_stack_frame;
 
@@ -284,6 +309,14 @@ struct JSRuntime {
 #endif
     void *user_opaque;
 };
+
+typedef struct {
+    uintptr_t stack_top;
+    JSValue current_exception;
+    BOOL in_prepare_stack_trace : 8;
+    struct JSStackFrame *current_stack_frame;
+    ListNode job_list;
+} JSRuntimeInternalThreadState;
 
 struct JSClass {
     uint32_t class_id; /* 0 means free entry */
@@ -404,6 +437,7 @@ struct JSContext {
     JSValue regexp_ctor;
     JSValue promise_ctor;
     JSValue native_error_proto[JS_NATIVE_ERROR_COUNT];
+    JSValue error_ctor;
     JSValue iterator_proto;
     JSValue async_iterator_proto;
     JSValue array_proto_values;
@@ -412,6 +446,9 @@ struct JSContext {
 
     JSValue global_obj; /* global object */
     JSValue global_var_obj; /* contains the global let/const definitions */
+
+    JSGlobalAccessFunctions *global_access_funcs;
+    JSGlobalAccessFunctions global_access_funcs_storage;
 
     uint64_t random_state;
 #ifdef CONFIG_BIGNUM
