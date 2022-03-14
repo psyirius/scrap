@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 project(QuickJS)
 
-set(CMAKE_C_STANDARD        11)
+set(CMAKE_C_STANDARD        17)
+set(CMAKE_CXX_STANDARD      17)
 set(CMAKE_VERBOSE_MAKEFILE  on)
 
 file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/VERSION" QJS_VERSION)
@@ -84,6 +85,7 @@ endif()
 target_compile_definitions(${QJS_CORE_TARGET} PUBLIC
     CONFIG_VERSION="${QJS_VERSION}"
     CONFIG_BIGNUM
+    CONFIG_DEBUGGER
 #    USE_WORKER  # win32 needs fixes
     _GNU_SOURCE
     "$<IF:$<BOOL:${WIN32}>,__USE_MINGW_ANSI_STDIO,>"

@@ -9,6 +9,7 @@ TODO
   - MINGW
   - MSVC
   - CLANG
+  - LLVM (clang-cl)
   - CYGWIN
   - TCC
 - Add consistent types and data structures.

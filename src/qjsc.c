@@ -21,13 +21,13 @@ typedef struct {
     char *name;
     char *short_name;
     int flags;
-} namelist_entry_t;
+} NameListEntry;
 
-typedef struct NameList {
-    namelist_entry_t *array;
+typedef struct {
+    NameListEntry *array;
     int count;
     int size;
-} namelist_t;
+} NameList;
 
 typedef struct {
     const char *option_name;
@@ -45,29 +45,29 @@ static const char *c_ident_prefix = "qjsc_";
 
 #define FE_ALL (-1)
 
-static const FeatureEntry feature_list[] = {
-        {"date", "Date"},
-        {"eval", "Eval"},
-        {"string-normalize", "StringNormalize"},
-        {"regexp", "RegExp"},
-        {"json", "JSON"},
-        {"proxy", "Proxy"},
-        {"map", "MapSet"},
-        {"typedarray", "TypedArrays"},
-        {"promise", "Promise"},
+static
+const FeatureEntry feature_list[] = {
+    {"date", "Date"},
+    {"eval", "Eval"},
+    {"string-normalize", "StringNormalize"},
+    {"regexp", "RegExp"},
+    {"json", "JSON"},
+    {"proxy", "Proxy"},
+    {"map", "MapSet"},
+    {"typedarray", "TypedArrays"},
+    {"promise", "Promise"},
 #define FE_MODULE_LOADER 9
-        {"module-loader", NULL},
+    {"module-loader", NULL},
 #ifdef CONFIG_BIGNUM
-        {"bigint", "BigInt"},
+    {"bigint", "BigInt"},
 #endif
 };
 
-void namelist_add(NameList *lp, const char *name, const char *short_name,
-                  int flags) {
-    namelist_entry_t *e;
+void namelist_add(NameList *lp, const char *name, const char *short_name, int flags) {
+    NameListEntry *e;
     if (lp->count == lp->size) {
         size_t newsize = lp->size + (lp->size >> 1) + 4;
-        namelist_entry_t *a =
+        NameListEntry *a =
                 realloc(lp->array, sizeof(lp->array[0]) * newsize);
         /* XXX: check for realloc failure */
         lp->array = a;
@@ -84,7 +84,7 @@ void namelist_add(NameList *lp, const char *name, const char *short_name,
 
 void namelist_free(NameList *lp) {
     while (lp->count > 0) {
-        namelist_entry_t *e = &lp->array[--lp->count];
+        NameListEntry *e = &lp->array[--lp->count];
         free(e->name);
         free(e->short_name);
     }
@@ -93,17 +93,18 @@ void namelist_free(NameList *lp) {
     lp->size = 0;
 }
 
-namelist_entry_t *namelist_find(NameList *lp, const char *name) {
+NameListEntry *namelist_find(NameList *lp, const char *name) {
     int i;
     for (i = 0; i < lp->count; i++) {
-        namelist_entry_t *e = &lp->array[i];
+        NameListEntry *e = &lp->array[i];
         if (!strcmp(e->name, name))
             return e;
     }
     return NULL;
 }
 
-static void get_c_name(char *buf, size_t buf_size, const char *file) {
+static
+void get_c_name(char *buf, size_t buf_size, const char *file) {
     const char *p, *r;
     size_t len, i;
     int c;
@@ -119,17 +120,17 @@ static void get_c_name(char *buf, size_t buf_size, const char *file) {
         len = strlen(p);
     else
         len = r - p;
-    pstrcpy(buf, buf_size, c_ident_prefix);
+    pstrcpy(buf, (int) buf_size, c_ident_prefix);
     q = buf + strlen(buf);
     for (i = 0; i < len; i++) {
-        c = p[i];
+        c = (int) p[i];
         if (!((c >= '0' && c <= '9') ||
               (c >= 'A' && c <= 'Z') ||
               (c >= 'a' && c <= 'z'))) {
             c = '_';
         }
         if ((q - buf) < buf_size - 1)
-            *q++ = c;
+            *q++ = (char) c;
     }
     *q = '\0';
 }
@@ -138,7 +139,8 @@ static void get_c_name(char *buf, size_t buf_size, const char *file) {
 #define BYTECODE_HEXDUMP_BYTES_PER_ROW  8
 #endif
 
-static void dump_hex(FILE *file, const uint8_t *buffer, size_t size) {
+static
+void dump_hex(FILE *file, const uint8_t *buffer, size_t size) {
     size_t i = 0;
 
     for (; i < size; ++i) {
@@ -158,7 +160,8 @@ static void dump_hex(FILE *file, const uint8_t *buffer, size_t size) {
     if ((i % 8) != 0) fprintf(file, "\n");
 }
 
-static void output_object_code(JSContext *ctx, FILE *fo, JSValueConst obj, const char *c_name, BOOL load_only) {
+static
+void output_object_code(JSContext *ctx, FILE *fo, JSValueConst obj, const char *c_name, BOOL load_only) {
     uint8_t *out_buf;
     size_t out_buf_len;
     int flags;
@@ -181,12 +184,14 @@ static void output_object_code(JSContext *ctx, FILE *fo, JSValueConst obj, const
     js_free(ctx, out_buf);
 }
 
-static int js_module_dummy_init(JSContext *ctx, JSModuleDef *m) {
+static
+int js_module_dummy_init(JSContext *ctx, JSModuleDef *m) {
     /* should never be called when compiling JS code */
     abort();
 }
 
-static void find_unique_cname(char *cname, size_t cname_size) {
+static
+void find_unique_cname(char *cname, size_t cname_size) {
     char cname1[1024];
     int suffix_num;
     size_t len, max_len;
@@ -204,13 +209,13 @@ static void find_unique_cname(char *cname, size_t cname_size) {
             break;
         suffix_num++;
     }
+
     pstrcpy(cname, cname_size, cname1);
 }
 
-JSModuleDef *jsc_module_loader(JSContext *ctx,
-                               const char *module_name, void *opaque) {
+JSModuleDef *jsc_module_loader(JSContext *ctx, const char *module_name, void *opaque) {
     JSModuleDef *m;
-    namelist_entry_t *e;
+    NameListEntry *e;
 
     /* check if it is a declared C or system module */
     e = namelist_find(&cmodule_list, module_name);
@@ -255,10 +260,12 @@ JSModuleDef *jsc_module_loader(JSContext *ctx,
         m = JS_VALUE_GET_PTR(func_val);
         JS_FreeValue(ctx, func_val);
     }
+
     return m;
 }
 
-static void compile_file(JSContext *ctx, FILE *fo, const char *filename, const char *c_name1, int module) {
+static
+void compile_file(JSContext *ctx, FILE *fo, const char *filename, const char *c_name1, int module) {
     uint8_t *buf;
     char c_name[1024];
     int eval_flags;
@@ -295,20 +302,20 @@ static void compile_file(JSContext *ctx, FILE *fo, const char *filename, const c
 }
 
 static const char main_c_template1[] =
-        "int main(int argc, char **argv)\n"
-        "{\n"
-        "  JSRuntime *rt;\n"
-        "  JSContext *ctx;\n"
-        "  rt = JS_NewRuntime();\n"
-        "  js_std_set_worker_new_context_func(JS_NewCustomContext);\n"
-        "  js_std_init_handlers(rt);\n";
+    "int main(int argc, char **argv)\n"
+    "{\n"
+    "  JSRuntime *rt;\n"
+    "  JSContext *ctx;\n"
+    "  rt = JS_NewRuntime();\n"
+    "  js_std_set_worker_new_context_func(JS_NewCustomContext);\n"
+    "  js_std_init_handlers(rt);\n";
 
 static const char main_c_template2[] =
-        "  js_std_loop(ctx);\n"
-        "  JS_FreeContext(ctx);\n"
-        "  JS_FreeRuntime(rt);\n"
-        "  return 0;\n"
-        "}\n";
+    "  js_std_loop(ctx);\n"
+    "  JS_FreeContext(ctx);\n"
+    "  JS_FreeRuntime(rt);\n"
+    "  return 0;\n"
+    "}\n";
 
 #define PROG_NAME "qjsc"
 
@@ -674,7 +681,7 @@ int main(int argc, char **argv) {
         /* add the precompiled modules (XXX: could modify the module
            loader instead) */
         for (i = 0; i < init_module_list.count; i++) {
-            namelist_entry_t *e = &init_module_list.array[i];
+            NameListEntry *e = &init_module_list.array[i];
             /* initialize the static C modules */
 
             fprintf(file,
@@ -685,7 +692,7 @@ int main(int argc, char **argv) {
                     e->short_name, e->short_name, e->name);
         }
         for (i = 0; i < cname_list.count; i++) {
-            namelist_entry_t *e = &cname_list.array[i];
+            NameListEntry *e = &cname_list.array[i];
             if (e->flags) {
                 fprintf(file, "  js_std_eval_binary(ctx, %s, %s_size, 1);\n",
                         e->name, e->name);
@@ -713,7 +720,7 @@ int main(int argc, char **argv) {
         );
 
         for (i = 0; i < cname_list.count; i++) {
-            namelist_entry_t *e = &cname_list.array[i];
+            NameListEntry *e = &cname_list.array[i];
             if (!e->flags) {
                 fprintf(file, "  js_std_eval_binary(ctx, %s, %s_size, 0);\n",
                         e->name, e->name);
