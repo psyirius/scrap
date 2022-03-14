@@ -483,7 +483,7 @@ char* dll_error(char* msg, size_t* size) {
     );
 
     assert(mz == *size);
-    
+
     msg[mz] = '\0';
     *size = mz;
 
@@ -494,7 +494,7 @@ char* dll_error(char* msg, size_t* size) {
 }
 
 static
-JSModuleDef *js_module_loader_so(JSContext *ctx, const char *module_name) {
+JSModuleDef *js_native_module_loader(JSContext *ctx, const char *module_name) {
     char *filename = js_malloc(ctx, CString.length(module_name) + 1 /* for null terminator*/);
 
     if (filename == nullptr)
@@ -609,8 +609,8 @@ int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val, JS_BOOL use
 JSModuleDef *js_module_loader(JSContext *ctx, const char *module_name, void *opaque) {
     JSModuleDef *m;
 
-    if (has_suffix(module_name, ".so") || has_suffix(module_name, ".dll")) {
-        m = js_module_loader_so(ctx, module_name);
+    if (has_suffix(module_name, ".qjd")) {
+        m = js_native_module_loader(ctx, module_name);
     } else {
         size_t buf_len;
         uint8_t *buf;
@@ -635,6 +635,7 @@ JSModuleDef *js_module_loader(JSContext *ctx, const char *module_name, void *opa
         m = JS_VALUE_GET_PTR(func_val);
         JS_FreeValue(ctx, func_val);
     }
+    
     return m;
 }
 
