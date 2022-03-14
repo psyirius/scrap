@@ -27,6 +27,11 @@ typedef enum {
     JS_DEBUGGER_STEP_CONTINUE = 4,
 } JsDebuggerStepType;
 
+typedef size_t (TransportRead_t)(void *udata, char* buffer, size_t length);
+typedef size_t (TransportWrite_t)(void *udata, const char* buffer, size_t length);
+typedef size_t (TransportPeek_t)(void *udata);
+typedef void (TransportClose_t)(JSRuntime* rt, void *udata);
+
 typedef struct JSDebuggerInfo {
     // JSContext that is used to for the JSON transport and debugger state.
     JSContext *ctx;
@@ -41,10 +46,10 @@ typedef struct JSDebuggerInfo {
     int is_debugging;
     int is_paused;
 
-    size_t (*transport_read)(void *udata, char* buffer, size_t length);
-    size_t (*transport_write)(void *udata, const char* buffer, size_t length);
-    size_t (*transport_peek)(void *udata);
-    void (*transport_close)(JSRuntime* rt, void *udata);
+    TransportRead_t *transport_read;
+    TransportWrite_t *transport_write;
+    TransportPeek_t *transport_peek;
+    TransportClose_t *transport_close;
 
     void *transport_udata;
 
@@ -62,12 +67,12 @@ void js_debugger_check(JSContext *ctx, const uint8_t *pc);
 void js_debugger_exception(JSContext* ctx);
 void js_debugger_free(JSRuntime *rt, JSDebuggerInfo *info);
 void js_debugger_attach(
-        JSContext* ctx,
-        size_t (*transport_read)(void *udata, char* buffer, size_t length),
-        size_t (*transport_write)(void *udata, const char* buffer, size_t length),
-        size_t (*transport_peek)(void *udata),
-        void (*transport_close)(JSRuntime* rt, void *udata),
-        void *udata
+    JSContext* ctx,
+    TransportRead_t *transport_read,
+    TransportWrite_t *transport_write,
+    TransportPeek_t *transport_peek,
+    TransportClose_t *transport_close,
+    void *udata
 );
 void js_debugger_connect(JSContext *ctx, const char *address);
 void js_debugger_wait_connection(JSContext *ctx, const char* address);
@@ -100,5 +105,5 @@ JSValue js_debugger_evaluate(JSContext *ctx, int stack_index, JSValue expression
 // end internal api functions
 
 #ifdef __cplusplus
-}
+} /* extern "C" { */
 #endif

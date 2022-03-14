@@ -1,3 +1,5 @@
+#if !defined(_WIN32) && defined(CONFIG_DEBUGGER)
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -9,12 +11,8 @@
 #include <poll.h>
 #include <arpa/inet.h>
 
-struct js_transport_data {
-    int handle;
-} js_transport_data;
-
 static size_t js_transport_read(void *udata, char *buffer, size_t length) {
-    struct js_transport_data* data = (struct js_transport_data *)udata;
+    JS_DebuggerTransportData* data = (JS_DebuggerTransportData *)udata;
     if (data->handle <= 0)
         return -1;
 
@@ -38,7 +36,7 @@ static size_t js_transport_read(void *udata, char *buffer, size_t length) {
 }
 
 static size_t js_transport_write(void *udata, const char *buffer, size_t length) {
-    struct js_transport_data* data = (struct js_transport_data *)udata;
+    JS_DebuggerTransportData* data = (JS_DebuggerTransportData *)udata;
     if (data->handle <= 0)
         return -1;
 
@@ -59,7 +57,7 @@ static size_t js_transport_peek(void *udata) {
     struct pollfd fds[1];
     int poll_rc;
 
-    struct js_transport_data* data = (struct js_transport_data *)udata;
+    JS_DebuggerTransportData* data = (JS_DebuggerTransportData *)udata;
     if (data->handle <= 0)
         return -1;
 
@@ -80,7 +78,7 @@ static size_t js_transport_peek(void *udata) {
 }
 
 static void js_transport_close(JSRuntime* rt, void *udata) {
-    struct js_transport_data* data = (struct js_transport_data *)udata;
+    JS_DebuggerTransportData* data = (JS_DebuggerTransportData *)udata;
     if (data->handle <= 0)
         return;
     close(data->handle);
@@ -88,12 +86,18 @@ static void js_transport_close(JSRuntime* rt, void *udata) {
     free(udata);
 }
 
+static
+long str_to_int(char* str, int base) {
+    char *end_ptr = 0;
+    return strtol(str, &end_ptr, base);
+}
+
 // todo: fixup asserts to return errors.
 static struct sockaddr_in js_debugger_parse_sockaddr(const char* address) {
     char* port_string = strstr(address, ":");
     assert(port_string);
 
-    int port = atoi(port_string + 1);
+    int port = str_to_int(port_string + 1, 10);
     assert(port);
 
     char host_string[256];
@@ -118,9 +122,9 @@ void js_debugger_connect(JSContext *ctx, const char *address) {
     int client = socket(AF_INET, SOCK_STREAM, 0);
     assert(client > 0);
 
-    assert(!connect(client, (const struct sockaddr *)&addr, sizeof(addr)));
+    assert(connect(client, (const struct sockaddr *)&addr, sizeof(addr)) == 0);
 
-    struct js_transport_data *data = (struct js_transport_data *)malloc(sizeof(struct js_transport_data));
+    JS_DebuggerTransportData *data = (JS_DebuggerTransportData *)malloc(sizeof(JS_DebuggerTransportData));
     memset(data, 0, sizeof(js_transport_data));
     data->handle = client;
     js_debugger_attach(ctx, js_transport_read, js_transport_write, js_transport_peek, js_transport_close, data);
@@ -145,8 +149,10 @@ void js_debugger_wait_connection(JSContext *ctx, const char* address) {
     close(server);
     assert(client >= 0);
 
-    struct js_transport_data *data = (struct js_transport_data *)malloc(sizeof(struct js_transport_data));
+    JS_DebuggerTransportData *data = (JS_DebuggerTransportData *)malloc(sizeof(JS_DebuggerTransportData));
     memset(data, 0, sizeof(js_transport_data));
     data->handle = client;
     js_debugger_attach(ctx, js_transport_read, js_transport_write, js_transport_peek, js_transport_close, data);
 }
+
+#endif /* defined(CONFIG_DEBUGGER) */

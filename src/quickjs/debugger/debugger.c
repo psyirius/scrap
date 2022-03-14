@@ -1,5 +1,7 @@
 #include "quickjs/debugger/debugger.h"
 
+#include "quickjs/utils/cstring.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -40,7 +42,15 @@ int js_transport_write_fully(JSDebuggerInfo *info, const char *buffer, size_t le
 static
 int js_transport_write_message_newline(JSDebuggerInfo *info, const char* value, size_t len) {
     // length prefix is 8 hex followed by newline = 012345678\n
-    // not efficient, but protocol is then human readable.
+    // not efficient, but protocol is then human-readable.
+
+    char* buf = malloc(len + 1);
+    memcpy(buf, value, len);
+    buf[len] = '\0';
+    fprintf(stderr, "Debugger::send(%d): %s\n\n", len, buf);
+    fflush(stderr);
+    free(buf);
+
     char message_length[10];
     message_length[9] = '\0';
     sprintf(message_length, "%08x\n", (int)len + 1);
@@ -63,6 +73,7 @@ int js_transport_write_value(JSDebuggerInfo *info, JSValue value) {
     int ret = 0;
     if (len)
         ret = js_transport_write_message_newline(info, str, len);
+
     // else send error somewhere?
     JS_FreeCString(info->ctx, str);
     JS_FreeValue(info->ctx, objAsStr);
@@ -98,7 +109,6 @@ static
 JSValue js_get_scopes(JSContext *ctx, int frame) {
     // for now this is always the same.
     // global, local, closure. may change in the future. can check if closure is empty.
-
     JSValue scopes = JS_NewArray(ctx);
 
     int scope_count = 0;
@@ -164,6 +174,7 @@ void js_debugger_get_variable_type(JSContext *ctx, DebuggerSuspendedState *state
 
         JS_FreeValue(ctx, found);
     }
+
     JS_SetPropertyStr(ctx, var, "variablesReference", JS_NewInt32(ctx, (int32_t) reference));
 }
 
@@ -367,8 +378,7 @@ void js_process_request(JSDebuggerInfo *info, struct DebuggerSuspendedState *sta
             goto done;
         }
 
-        unfiltered:
-
+unfiltered:
         if (!JS_GetOwnPropertyNames(ctx, &tab_atom, &tab_atom_count, variable, JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK)) {
             int offset = 0;
 
@@ -399,6 +409,7 @@ done:
 
         js_transport_send_response(info, request, properties);
     }
+
     JS_FreeCString(ctx, command);
     JS_FreeValue(ctx, command_property);
     JS_FreeValue(ctx, request);
@@ -426,7 +437,7 @@ void js_process_breakpoints(JSDebuggerInfo *info, JSValue message) {
 
     JSValue breakpoints = JS_GetPropertyStr(ctx, message, "breakpoints");
     JS_SetPropertyStr(ctx, path_data, "breakpoints", breakpoints);
-    JS_SetPropertyStr(ctx, path_data, "dirty", JS_NewInt32(ctx, info->breakpoints_dirty_counter));
+    JS_SetPropertyStr(ctx, path_data, "dirty", JS_NewInt32(ctx, (int32_t) info->breakpoints_dirty_counter));
 
     JS_FreeValue(ctx, message);
 }
@@ -475,6 +486,13 @@ int js_process_debugger_messages(JSDebuggerInfo *info, const uint8_t *cur_pc) {
 
         if (!js_transport_read_fully(info, info->message_buffer, message_length))
             goto done;
+
+        char* _buf = malloc(message_length + 1);
+        memcpy(_buf, info->message_buffer, message_length);
+        _buf[message_length] = '\0';
+        fprintf(stderr, "Debugger::recv(%d): %s\n", message_length, _buf);
+        fflush(stderr);
+        free(_buf);
 
         info->message_buffer[message_length] = '\0';
 
@@ -717,12 +735,12 @@ void js_debugger_free(JSRuntime *rt, JSDebuggerInfo *info) {
 }
 
 void js_debugger_attach(
-        JSContext* ctx,
-        size_t (*transport_read)(void *udata, char* buffer, size_t length),
-        size_t (*transport_write)(void *udata, const char* buffer, size_t length),
-        size_t (*transport_peek)(void *udata),
-        void (*transport_close)(JSRuntime* rt, void *udata),
-        void *udata
+    JSContext* ctx,
+    TransportRead_t *transport_read,
+    TransportWrite_t *transport_write,
+    TransportPeek_t *transport_peek,
+    TransportClose_t *transport_close,
+    void *udata
 ) {
     JSRuntime *rt = JS_GetRuntime(ctx);
     JSDebuggerInfo *info = js_debugger_info(rt);

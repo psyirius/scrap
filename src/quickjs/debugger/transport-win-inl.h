@@ -8,30 +8,28 @@
 #include <stdlib.h>
 #include <assert.h>
 
-typedef struct {
-  int handle;
-} JS_DebuggerTransportData;
-
 static
 size_t js_transport_read(void* udata, char* buffer, size_t length) {
     JS_DebuggerTransportData* data = (JS_DebuggerTransportData*) udata;
-    if(data->handle <= 0)
+
+    if (data->handle <= 0)
         return -1;
 
-    if(length == 0)
+    if (length == 0)
         return -2;
 
-    if(buffer == NULL)
+    if (buffer == NULL)
         return -3;
 
     ssize_t ret = recv(data->handle, (void*)buffer, (int)length, 0);
-    if(ret < 0)
+
+    if (ret < 0)
         return -4;
 
-    if(ret == 0)
+    if (ret == 0)
         return -5;
 
-    if(ret > length)
+    if (ret > length)
         return -6;
 
     return ret;
@@ -39,21 +37,23 @@ size_t js_transport_read(void* udata, char* buffer, size_t length) {
 
 static
 size_t js_transport_write(void* udata, const char* buffer, size_t length) {
-  JS_DebuggerTransportData* data = (JS_DebuggerTransportData*)udata;
-  if(data->handle <= 0)
-    return -1;
+    JS_DebuggerTransportData* data = (JS_DebuggerTransportData*)udata;
 
-  if(length == 0)
-    return -2;
+    if (data->handle <= 0)
+        return -1;
 
-  if(buffer == NULL)
-    return -3;
+    if (length == 0)
+        return -2;
 
-  size_t ret = send(data->handle, (const void*)buffer, (int)length, 0);
-  if(ret <= 0 || ret > (ssize_t)length)
-    return -4;
+    if (buffer == 0)
+        return -3;
 
-  return ret;
+    size_t ret = send(data->handle, (const void*)buffer, (int)length, 0);
+
+    if (ret <= 0 || ret > (ssize_t)length)
+        return -4;
+
+    return ret;
 }
 
 static
@@ -106,8 +106,10 @@ int win_sock_init() {
 // TODO: fixup asserts to return errors.
 static
 struct sockaddr_in js_debugger_parse_sockaddr(const char* address) {
-    // should init WSA first
+    // you really shouldn't be calling WSAStartup() here.
+    // Call it at app startup instead...
     int err = win_sock_init();
+
     if (err != 0) {
         fprintf(stderr, "Error %d in win_sock_init\n", err);
         fflush(stderr);
@@ -136,13 +138,31 @@ struct sockaddr_in js_debugger_parse_sockaddr(const char* address) {
     return addr;
 }
 
+static
+void close_sock(SOCKET *sock) {
+    // preserve current error code
+    int err = WSAGetLastError();
+    closesocket(*sock);
+    *sock = INVALID_SOCKET;
+    WSASetLastError(err);
+}
+
 void js_debugger_connect(JSContext* ctx, const char* address) {
   struct sockaddr_in addr = js_debugger_parse_sockaddr(address);
 
-  SOCKET client = socket(AF_INET, SOCK_STREAM, 0);
-  assert(client > 0);
+  SOCKET client = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
 
-  assert(connect(client, (const struct sockaddr*)&addr, sizeof(addr)) == 0);
+  assert(client != INVALID_SOCKET);
+
+  int cer = connect(client, (const struct sockaddr*)&addr, sizeof(addr));
+
+  assert(cer == 0);
+
+  if (cer == SOCKET_ERROR) {
+    // connection failed
+    close_sock(&client);
+    return;
+  }
 
   JS_DebuggerTransportData* data = (JS_DebuggerTransportData*) malloc(sizeof(JS_DebuggerTransportData));
   memset(data, 0, sizeof(JS_DebuggerTransportData));
@@ -153,7 +173,7 @@ void js_debugger_connect(JSContext* ctx, const char* address) {
 void js_debugger_wait_connection(JSContext* ctx, const char* address) {
   struct sockaddr_in addr = js_debugger_parse_sockaddr(address);
 
-  SOCKET server = socket(AF_INET, SOCK_STREAM, 0);
+  SOCKET server = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
   assert(server >= 0);
 
   int reuseAddress = 1;
