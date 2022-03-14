@@ -11,7 +11,8 @@
 DECL_METHOD(length, size_t);
 DECL_METHOD(cmp, int, const char* other);
 DECL_METHOD(equals, bool, const char* other);
-DECL_METHOD(is_numbers, bool);
+DECL_METHOD(is_digits, bool);
+DECL_METHOD(find, const char*, char find);
 DECL_METHOD(replace_char, size_t, char find, char replace);
 
 // Namespace model setup
@@ -19,7 +20,8 @@ CStringPrototype CString = {
     REF_METHOD(length),
     REF_METHOD(cmp),
     REF_METHOD(equals),
-    REF_METHOD(is_numbers),
+    REF_METHOD(is_digits),
+    REF_METHOD(find),
     REF_METHOD(replace_char),
 };
 
@@ -46,7 +48,7 @@ IMPL_METHOD(equals, bool, const char* other) {
     return REF_METHOD(cmp)(self, other) == 0;
 }
 
-IMPL_METHOD(is_numbers, bool) {
+IMPL_METHOD(is_digits, bool) {
     char *s = (char *) self;
     while (*s != '\0') {
         if ((*s < '0') || (*s > '9')) {
@@ -57,9 +59,8 @@ IMPL_METHOD(is_numbers, bool) {
     return true;
 }
 
-static
-char *cstr_find(char *str, char find) {
-    char *s = str;
+IMPL_METHOD(find, const char*, char find) {
+    char *s = (char *) self;
     while (*s != '\0') {
         if (*s == find) {
             return s;
@@ -74,7 +75,7 @@ IMPL_METHOD(replace_char, size_t, char find, char replace) {
     char *ps = (char *) self;
     size_t o = 0;
 
-    while((ps = cstr_find(ps, find)) != nullptr) {
+    while((ps = (char *) REF_METHOD(find)(ps, find)) != nullptr) {
         *ps++ = replace;
         o++;
     }
