@@ -44,7 +44,7 @@ files = (
     'NormalizationTest.txt',
     'Scripts.txt',
     'PropertyValueAliases.txt',
-    ('emoji/emoji-data.txt', 'emoji-data.txt'),
+    ('emoji/emoji-data.txt', 'emoji-data.txt',),
 )
 
 # Ensure output directory exists
@@ -54,7 +54,13 @@ for file in files:
     dest_file = file
 
     if isinstance(file, tuple):
-        file, dest_file = file
+        if len(file) == 2:
+            file, dest_file = file
+        elif len(file) == 1:
+            file, = file
+            dest_file = file
+        else:
+            raise Exception('tuple of 1 or 2 elements expected!')
 
     url = urljoin(base_url, file)
     dest = path.join(dest_dir, dest_file)
