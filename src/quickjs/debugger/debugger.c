@@ -11,10 +11,11 @@ typedef struct DebuggerSuspendedState {
     const uint8_t *cur_pc;
 } DebuggerSuspendedState;
 
-static int js_transport_read_fully(JSDebuggerInfo *info, char *buffer, size_t length) {
-    int offset = 0;
+static
+int js_transport_read_fully(JSDebuggerInfo *info, char *buffer, size_t length) {
+    size_t offset = 0;
     while (offset < length) {
-        int received = info->transport_read(info->transport_udata, buffer + offset, length - offset);
+        size_t received = info->transport_read(info->transport_udata, buffer + offset, length - offset);
         if (received <= 0)
             return 0;
         offset += received;
@@ -23,10 +24,11 @@ static int js_transport_read_fully(JSDebuggerInfo *info, char *buffer, size_t le
     return 1;
 }
 
-static int js_transport_write_fully(JSDebuggerInfo *info, const char *buffer, size_t length) {
-    int offset = 0;
+static
+int js_transport_write_fully(JSDebuggerInfo *info, const char *buffer, size_t length) {
+    size_t offset = 0;
     while (offset < length) {
-        int sent = info->transport_write(info->transport_udata, buffer + offset, length - offset);
+        size_t sent = info->transport_write(info->transport_udata, buffer + offset, length - offset);
         if (sent <= 0)
             return 0;
         offset += sent;
@@ -35,7 +37,8 @@ static int js_transport_write_fully(JSDebuggerInfo *info, const char *buffer, si
     return 1;
 }
 
-static int js_transport_write_message_newline(JSDebuggerInfo *info, const char* value, size_t len) {
+static
+int js_transport_write_message_newline(JSDebuggerInfo *info, const char* value, size_t len) {
     // length prefix is 8 hex followed by newline = 012345678\n
     // not efficient, but protocol is then human readable.
     char message_length[10];
@@ -50,33 +53,40 @@ static int js_transport_write_message_newline(JSDebuggerInfo *info, const char* 
     return js_transport_write_fully(info, newline, 1);
 }
 
-static int js_transport_write_value(JSDebuggerInfo *info, JSValue value) {
-    JSValue stringified = JS_JSONStringify(info->ctx, value, JS_UNDEFINED, JS_UNDEFINED);
+static
+int js_transport_write_value(JSDebuggerInfo *info, JSValue value) {
+    JSValue objAsStr = JS_JSONStringify(info->ctx, value, JS_UNDEFINED, JS_UNDEFINED);
+
     size_t len;
-    const char* str = JS_ToCStringLen(info->ctx, &len, stringified);
+    const char* str = JS_ToCStringLen(info->ctx, &len, objAsStr);
+
     int ret = 0;
     if (len)
         ret = js_transport_write_message_newline(info, str, len);
     // else send error somewhere?
     JS_FreeCString(info->ctx, str);
-    JS_FreeValue(info->ctx, stringified);
+    JS_FreeValue(info->ctx, objAsStr);
     JS_FreeValue(info->ctx, value);
+
     return ret;
 }
 
-static JSValue js_transport_new_envelope(JSDebuggerInfo *info, const char *type) {
+static
+JSValue js_transport_new_envelope(JSDebuggerInfo *info, const char *type) {
     JSValue ret = JS_NewObject(info->ctx);
     JS_SetPropertyStr(info->ctx, ret, "type", JS_NewString(info->ctx, type));
     return ret;
 }
 
-static int js_transport_send_event(JSDebuggerInfo *info, JSValue event) {
+static
+int js_transport_send_event(JSDebuggerInfo *info, JSValue event) {
     JSValue envelope = js_transport_new_envelope(info, "event");
     JS_SetPropertyStr(info->ctx, envelope, "event", event);
     return js_transport_write_value(info, envelope);
 }
 
-static int js_transport_send_response(JSDebuggerInfo *info, JSValue request, JSValue body) {
+static
+int js_transport_send_response(JSDebuggerInfo *info, JSValue request, JSValue body) {
     JSContext *ctx = info->ctx;
     JSValue envelope = js_transport_new_envelope(info, "response");
     JS_SetPropertyStr(ctx, envelope, "body", body);
@@ -84,7 +94,8 @@ static int js_transport_send_response(JSDebuggerInfo *info, JSValue request, JSV
     return js_transport_write_value(info, envelope);
 }
 
-static JSValue js_get_scopes(JSContext *ctx, int frame) {
+static
+JSValue js_get_scopes(JSContext *ctx, int frame) {
     // for now this is always the same.
     // global, local, closure. may change in the future. can check if closure is empty.
 
@@ -113,17 +124,15 @@ static JSValue js_get_scopes(JSContext *ctx, int frame) {
     return scopes;
 }
 
-static inline JS_BOOL JS_IsInteger(JSValueConst v)
-{
+static inline
+JS_BOOL JS_IsInteger(JSValueConst v) {
     int tag = JS_VALUE_GET_TAG(v);
     return tag == JS_TAG_INT || tag == JS_TAG_BIG_INT;
 }
 
-static void js_debugger_get_variable_type(JSContext *ctx,
-                                          struct DebuggerSuspendedState *state,
-                                          JSValue var, JSValue var_val) {
-
-    // 0 means not expandible
+static
+void js_debugger_get_variable_type(JSContext *ctx, DebuggerSuspendedState *state, JSValue var, JSValue var_val) {
+    // 0 means not expandable
     uint32_t reference = 0;
     if (JS_IsString(var_val))
         JS_SetPropertyStr(ctx, var, "type", JS_NewString(ctx, "string"));
@@ -147,17 +156,19 @@ static void js_debugger_get_variable_type(JSContext *ctx,
         if (JS_IsUndefined(found)) {
             reference = state->variable_reference_count++;
             JS_SetPropertyUint32(ctx, state->variable_references, reference, JS_DupValue(ctx, var_val));
-            JS_SetPropertyUint32(ctx, state->variable_pointers, pl, JS_NewInt32(ctx, reference));
+            JS_SetPropertyUint32(ctx, state->variable_pointers, pl, JS_NewInt32(ctx, (int32_t) reference));
         }
         else {
             JS_ToUint32(ctx, &reference, found);
         }
+
         JS_FreeValue(ctx, found);
     }
-    JS_SetPropertyStr(ctx, var, "variablesReference", JS_NewInt32(ctx, reference));
+    JS_SetPropertyStr(ctx, var, "variablesReference", JS_NewInt32(ctx, (int32_t) reference));
 }
 
-static void js_debugger_get_value(JSContext *ctx, JSValue var_val, JSValue var, const char *value_property) {
+static
+void js_debugger_get_value(JSContext *ctx, JSValue var_val, JSValue var, const char *value_property) {
     // do not toString on Arrays, since that makes a giant string of all the elements.
     // todo: typed arrays?
     if (JS_IsArray(ctx, var_val)) {
@@ -168,16 +179,15 @@ static void js_debugger_get_value(JSContext *ctx, JSValue var_val, JSValue var, 
         char lenBuf[64];
         sprintf(lenBuf, "Array (%d)", len);
         JS_SetPropertyStr(ctx, var, value_property, JS_NewString(ctx, lenBuf));
-        JS_SetPropertyStr(ctx, var, "indexedVariables", JS_NewInt32(ctx, len));
+        JS_SetPropertyStr(ctx, var, "indexedVariables", JS_NewInt32(ctx, (int32_t) len));
     }
     else {
         JS_SetPropertyStr(ctx, var, value_property, JS_ToString(ctx, var_val));
     }
 }
 
-static JSValue js_debugger_get_variable(JSContext *ctx,
-                                        struct DebuggerSuspendedState *state,
-                                        JSValue var_name, JSValue var_val) {
+static
+JSValue js_debugger_get_variable(JSContext *ctx, DebuggerSuspendedState *state, JSValue var_name, JSValue var_val) {
     JSValue var = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, var, "name", var_name);
     js_debugger_get_value(ctx, var_val, var, "value");
@@ -185,7 +195,8 @@ static JSValue js_debugger_get_variable(JSContext *ctx,
     return var;
 }
 
-static int js_debugger_get_frame(JSContext *ctx, JSValue args) {
+static
+int js_debugger_get_frame(JSContext *ctx, JSValue args) {
     JSValue reference_property = JS_GetPropertyStr(ctx, args, "frameId");
     int frame;
     JS_ToInt32(ctx, &frame, reference_property);
@@ -194,7 +205,8 @@ static int js_debugger_get_frame(JSContext *ctx, JSValue args) {
     return frame;
 }
 
-static void js_send_stopped_event(JSDebuggerInfo *info, const char *reason) {
+static
+void js_send_stopped_event(JSDebuggerInfo *info, const char *reason) {
     JSContext *ctx = info->debugging_ctx;
 
     JSValue event = JS_NewObject(ctx);
@@ -206,8 +218,8 @@ static void js_send_stopped_event(JSDebuggerInfo *info, const char *reason) {
     js_transport_send_event(info, event);
 }
 
-static void js_free_prop_enum(JSContext *ctx, JSPropertyEnum *tab, uint32_t len)
-{
+static
+void js_free_prop_enum(JSContext *ctx, JSPropertyEnum *tab, uint32_t len) {
     uint32_t i;
     if (tab) {
         for(i = 0; i < len; i++)
@@ -216,7 +228,8 @@ static void js_free_prop_enum(JSContext *ctx, JSPropertyEnum *tab, uint32_t len)
     }
 }
 
-static uint32_t js_get_property_as_uint32(JSContext *ctx, JSValue obj, const char* property) {
+static
+uint32_t js_get_property_as_uint32(JSContext *ctx, JSValue obj, const char* property) {
     JSValue prop = JS_GetPropertyStr(ctx, obj, property);
     uint32_t ret;
     JS_ToUint32(ctx, &ret, prop);
@@ -224,14 +237,15 @@ static uint32_t js_get_property_as_uint32(JSContext *ctx, JSValue obj, const cha
     return ret;
 }
 
-static void js_process_request(JSDebuggerInfo *info, struct DebuggerSuspendedState *state, JSValue request) {
+static
+void js_process_request(JSDebuggerInfo *info, struct DebuggerSuspendedState *state, JSValue request) {
     JSContext *ctx = info->ctx;
     JSValue command_property = JS_GetPropertyStr(ctx, request, "command");
     const char *command = JS_ToCString(ctx, command_property);
     if (strcmp("continue", command) == 0) {
         info->stepping = JS_DEBUGGER_STEP_CONTINUE;
         info->step_over = js_debugger_current_location(ctx, state->cur_pc);
-        info->step_depth = js_debugger_stack_depth(ctx);
+        info->step_depth = (int) js_debugger_stack_depth(ctx);
         js_transport_send_response(info, request, JS_UNDEFINED);
         info->is_paused = 0;
     }
@@ -243,21 +257,21 @@ static void js_process_request(JSDebuggerInfo *info, struct DebuggerSuspendedSta
     else if (strcmp("next", command) == 0) {
         info->stepping = JS_DEBUGGER_STEP;
         info->step_over = js_debugger_current_location(ctx, state->cur_pc);
-        info->step_depth = js_debugger_stack_depth(ctx);
+        info->step_depth = (int)js_debugger_stack_depth(ctx);
         js_transport_send_response(info, request, JS_UNDEFINED);
         info->is_paused = 0;
     }
     else if (strcmp("stepIn", command) == 0) {
         info->stepping = JS_DEBUGGER_STEP_IN;
         info->step_over = js_debugger_current_location(ctx, state->cur_pc);
-        info->step_depth = js_debugger_stack_depth(ctx);
+        info->step_depth = (int)js_debugger_stack_depth(ctx);
         js_transport_send_response(info, request, JS_UNDEFINED);
         info->is_paused = 0;
     }
     else if (strcmp("stepOut", command) == 0) {
         info->stepping = JS_DEBUGGER_STEP_OUT;
         info->step_over = js_debugger_current_location(ctx, state->cur_pc);
-        info->step_depth = js_debugger_stack_depth(ctx);
+        info->step_depth = (int)js_debugger_stack_depth(ctx);
         js_transport_send_response(info, request, JS_UNDEFINED);
         info->is_paused = 0;
     }
@@ -307,17 +321,17 @@ static void js_process_request(JSDebuggerInfo *info, struct DebuggerSuspendedSta
         // then it must be a frame locals, frame closures, or the global
         if (JS_IsUndefined(variable)) {
             skip_proto = 1;
-            int frame = reference >> 2;
-            int scope = reference % 4;
+            uint32_t frame = reference >> 2;
+            uint32_t scope = reference % 4;
 
             assert(frame < js_debugger_stack_depth(ctx));
 
             if (scope == 0)
                 variable = JS_GetGlobalObject(ctx);
             else if (scope == 1)
-                variable = js_debugger_local_variables(ctx, frame);
+                variable = js_debugger_local_variables(ctx, (int) frame);
             else if (scope == 2)
-                variable = js_debugger_closure_variables(ctx, frame);
+                variable = js_debugger_closure_variables(ctx, (int) frame);
             else
                 assert(0);
 
@@ -355,9 +369,7 @@ static void js_process_request(JSDebuggerInfo *info, struct DebuggerSuspendedSta
 
         unfiltered:
 
-        if (!JS_GetOwnPropertyNames(ctx, &tab_atom, &tab_atom_count, variable,
-                                    JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK)) {
-
+        if (!JS_GetOwnPropertyNames(ctx, &tab_atom, &tab_atom_count, variable, JS_GPN_STRING_MASK | JS_GPN_SYMBOL_MASK)) {
             int offset = 0;
 
             if (!skip_proto) {
@@ -382,7 +394,7 @@ static void js_process_request(JSDebuggerInfo *info, struct DebuggerSuspendedSta
             js_free_prop_enum(ctx, tab_atom, tab_atom_count);
         }
 
-        done:
+done:
         JS_FreeValue(ctx, variable);
 
         js_transport_send_response(info, request, properties);
@@ -392,7 +404,8 @@ static void js_process_request(JSDebuggerInfo *info, struct DebuggerSuspendedSta
     JS_FreeValue(ctx, request);
 }
 
-static void js_process_breakpoints(JSDebuggerInfo *info, JSValue message) {
+static
+void js_process_breakpoints(JSDebuggerInfo *info, JSValue message) {
     JSContext *ctx = info->ctx;
 
     // force all functions to reprocess their breakpoints.
@@ -424,8 +437,9 @@ JSValue js_debugger_file_breakpoints(JSContext *ctx, const char* path) {
     return path_data;
 }
 
-static int js_process_debugger_messages(JSDebuggerInfo *info, const uint8_t *cur_pc) {
-    // continue processing messages until the continue message is received.
+static
+int js_process_debugger_messages(JSDebuggerInfo *info, const uint8_t *cur_pc) {
+    // continue processing messages until the continue-message is received.
     JSContext *ctx = info->ctx;
     struct DebuggerSuspendedState state;
     state.variable_reference_count = js_debugger_stack_depth(ctx) << 2;
@@ -440,7 +454,7 @@ static int js_process_debugger_messages(JSDebuggerInfo *info, const uint8_t *cur
         fflush(stderr);
 
         // length prefix is 8 hex followed by newline = 012345678\n
-        // not efficient, but protocol is then human readable.
+        // not efficient, but protocol is then human-readable.
         if (!js_transport_read_fully(info, message_length_buf, 9))
             goto done;
 
@@ -465,8 +479,8 @@ static int js_process_debugger_messages(JSDebuggerInfo *info, const uint8_t *cur
         info->message_buffer[message_length] = '\0';
 
         JSValue message = JS_ParseJSON(ctx, info->message_buffer, message_length, "<debugger>");
-        JSValue vtype = JS_GetPropertyStr(ctx, message, "type");
-        const char *type = JS_ToCString(ctx, vtype);
+        JSValue val_type = JS_GetPropertyStr(ctx, message, "type");
+        const char *type = JS_ToCString(ctx, val_type);
         if (strcmp("request", type) == 0) {
             js_process_request(info, &state, JS_GetPropertyStr(ctx, message, "request"));
             // done_processing = 1;
@@ -484,14 +498,14 @@ static int js_process_debugger_messages(JSDebuggerInfo *info, const uint8_t *cur
         }
 
         JS_FreeCString(ctx, type);
-        JS_FreeValue(ctx, vtype);
+        JS_FreeValue(ctx, val_type);
         JS_FreeValue(ctx, message);
     }
     while (info->is_paused);
 
     ret = 1;
 
-    done:
+done:
     JS_FreeValue(ctx, state.variable_references);
     JS_FreeValue(ctx, state.variable_pointers);
     return ret;
@@ -512,7 +526,8 @@ void js_debugger_exception(JSContext *ctx) {
     info->ctx = NULL;
 }
 
-static void js_debugger_context_event(JSContext *caller_ctx, const char *reason) {
+static
+void js_debugger_context_event(JSContext *caller_ctx, const char *reason) {
     if (!js_debugger_is_transport_connected(JS_GetRuntime(caller_ctx)))
         return;
 
@@ -565,17 +580,14 @@ void js_debugger_check(JSContext* ctx, const uint8_t *cur_pc) {
     if (info->transport_close == NULL)
         goto done;
 
-    JSDebuggerLocation location;
-    int depth;
-
     // perform stepping checks prior to the breakpoint check
     // as those need to preempt breakpoint behavior to skip their last
     // position, which may be a breakpoint.
     if (info->stepping) {
         // all step operations need to ignore their step location, as those
         // may be on a breakpoint.
-        location = js_debugger_current_location(ctx, cur_pc);
-        depth = js_debugger_stack_depth(ctx);
+        JSDebuggerLocation location = js_debugger_current_location(ctx, cur_pc);
+        int depth = (int) js_debugger_stack_depth(ctx);
         if (info->step_depth == depth
             && location.filename == info->step_over.filename
             && location.line == info->step_over.line
@@ -599,7 +611,7 @@ void js_debugger_check(JSContext* ctx, const uint8_t *cur_pc) {
             info->stepping = 0;
         }
         else if (info->stepping == JS_DEBUGGER_STEP_IN) {
-            int depth = js_debugger_stack_depth(ctx);
+            int depth = (int) js_debugger_stack_depth(ctx);
             // break if the stack is deeper
             // or
             // break if the depth is the same, but the location has changed
@@ -617,7 +629,7 @@ void js_debugger_check(JSContext* ctx, const uint8_t *cur_pc) {
             js_send_stopped_event(info, "stepIn");
         }
         else if (info->stepping == JS_DEBUGGER_STEP_OUT) {
-            int depth = js_debugger_stack_depth(ctx);
+            int depth = (int) js_debugger_stack_depth(ctx);
             if (depth >= info->step_depth)
                 goto done;
             info->stepping = 0;
@@ -646,7 +658,7 @@ void js_debugger_check(JSContext* ctx, const uint8_t *cur_pc) {
     // if not paused, we ought to peek at the stream
     // and read it without blocking until all data is consumed.
     if (!info->is_paused) {
-        // only peek at the stream every now and then.
+        // only peek at the stream sometimes.
         if (info->peek_ticks++ < 10000 && !info->should_peek)
             goto done;
 
@@ -654,10 +666,10 @@ void js_debugger_check(JSContext* ctx, const uint8_t *cur_pc) {
         info->should_peek = 0;
 
         // continue peek/reading until there's nothing left.
-        // breakpoints may arrive outside of a debugger pause.
+        // breakpoints may arrive outside the debugger pause.
         // once paused, fall through to handle the pause.
         while (!info->is_paused) {
-            int peek = info->transport_peek(info->transport_udata);
+            int peek = (int) info->transport_peek(info->transport_udata);
             if (peek < 0)
                 goto fail;
             if (peek == 0)
