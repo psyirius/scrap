@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.20)
 project(QuickJS)
 
 set(CMAKE_C_STANDARD        11)
-set(CMAKE_CXX_STANDARD      11)
 set(CMAKE_VERBOSE_MAKEFILE  on)
 
 file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/VERSION" QJS_VERSION)
@@ -37,12 +36,10 @@ set(QJS_TEST_EXP_SOURCE_DIR ${QJS_TESTS_SOURCE_DIR}/experimental)
 
 file(GLOB_RECURSE QJS_CORE_HEADERS
     ${QJS_INCLUDE_DIR}/quickjs/*.h
-    ${QJS_INCLUDE_DIR}/quickjs/*.hpp
 )
 
 file(GLOB_RECURSE QJS_CORE_SOURCES
     ${QJS_SOURCE_DIR}/quickjs/*.c
-    ${QJS_SOURCE_DIR}/quickjs/*.cpp
 )
 
 set(QJS_CORE_TARGET qjs-core)
