@@ -23,7 +23,7 @@ typedef struct {
     int flags;
 } namelist_entry_t;
 
-typedef struct namelist_t {
+typedef struct NameList {
     namelist_entry_t *array;
     int count;
     int size;
@@ -34,9 +34,9 @@ typedef struct {
     const char *init_name;
 } FeatureEntry;
 
-static namelist_t cname_list;
-static namelist_t cmodule_list;
-static namelist_t init_module_list;
+static NameList cname_list;
+static NameList cmodule_list;
+static NameList init_module_list;
 static uint64_t feature_bitmap;
 static FILE *outfile;
 static BOOL byte_swap;
@@ -62,7 +62,7 @@ static const FeatureEntry feature_list[] = {
 #endif
 };
 
-void namelist_add(namelist_t *lp, const char *name, const char *short_name,
+void namelist_add(NameList *lp, const char *name, const char *short_name,
                   int flags) {
     namelist_entry_t *e;
     if (lp->count == lp->size) {
@@ -82,7 +82,7 @@ void namelist_add(namelist_t *lp, const char *name, const char *short_name,
     e->flags = flags;
 }
 
-void namelist_free(namelist_t *lp) {
+void namelist_free(NameList *lp) {
     while (lp->count > 0) {
         namelist_entry_t *e = &lp->array[--lp->count];
         free(e->name);
@@ -93,7 +93,7 @@ void namelist_free(namelist_t *lp) {
     lp->size = 0;
 }
 
-namelist_entry_t *namelist_find(namelist_t *lp, const char *name) {
+namelist_entry_t *namelist_find(NameList *lp, const char *name) {
     int i;
     for (i = 0; i < lp->count; i++) {
         namelist_entry_t *e = &lp->array[i];
@@ -468,7 +468,7 @@ int main(int argc, char **argv) {
 #ifdef CONFIG_BIGNUM
     BOOL bignum_ext = FALSE;
 #endif
-    namelist_t dynamic_module_list;
+    NameList dynamic_module_list;
 
     out_filename = NULL;
     output_type = OUTPUT_EXECUTABLE;

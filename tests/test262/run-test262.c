@@ -26,16 +26,16 @@
 
 #include "quickjs/utils/common.h"
 
-typedef struct namelist_t {
+typedef struct NameList {
     char **array;
     int count;
     int size;
     unsigned int sorted: 1;
-} namelist_t;
+} NameList;
 
-namelist_t test_list;
-namelist_t exclude_list;
-namelist_t exclude_dir_list;
+NameList test_list;
+NameList exclude_list;
+NameList exclude_dir_list;
 
 FILE *outfile;
 enum test_mode_t {
@@ -217,7 +217,7 @@ int namelist_cmp_indirect(const void *a, const void *b) {
     return namelist_cmp(*(const char **) a, *(const char **) b);
 }
 
-void namelist_sort(namelist_t *lp) {
+void namelist_sort(NameList *lp) {
     int i, count;
     if (lp->count > 1) {
         qsort(lp->array, lp->count, sizeof(*lp->array), namelist_cmp_indirect);
@@ -234,7 +234,7 @@ void namelist_sort(namelist_t *lp) {
     lp->sorted = 1;
 }
 
-int namelist_find(namelist_t *lp, const char *name) {
+int namelist_find(NameList *lp, const char *name) {
     int a, b, m, cmp;
 
     if (!lp->sorted) {
@@ -253,7 +253,7 @@ int namelist_find(namelist_t *lp, const char *name) {
     return -1;
 }
 
-void namelist_add(namelist_t *lp, const char *base, const char *name) {
+void namelist_add(NameList *lp, const char *base, const char *name) {
     char *s;
 
     s = compose_path(base, name);
@@ -274,7 +274,7 @@ void namelist_add(namelist_t *lp, const char *base, const char *name) {
     fatal(1, "allocation failure\n");
 }
 
-void namelist_load(namelist_t *lp, const char *filename) {
+void namelist_load(NameList *lp, const char *filename) {
     char buf[1024];
     char *base_name;
     FILE *f;
@@ -296,7 +296,7 @@ void namelist_load(namelist_t *lp, const char *filename) {
     fclose(f);
 }
 
-void namelist_add_from_error_file(namelist_t *lp, const char *file) {
+void namelist_add_from_error_file(NameList *lp, const char *file) {
     const char *p, *p0;
     char *pp;
 
@@ -309,7 +309,7 @@ void namelist_add_from_error_file(namelist_t *lp, const char *file) {
     }
 }
 
-void namelist_free(namelist_t *lp) {
+void namelist_free(NameList *lp) {
     while (lp->count > 0) {
         free(lp->array[--lp->count]);
     }
@@ -319,7 +319,7 @@ void namelist_free(namelist_t *lp) {
 }
 
 static int add_test_file(const char *filename, const struct stat *ptr, int flag) {
-    namelist_t *lp = &test_list;
+    NameList *lp = &test_list;
     if (has_suffix(filename, ".js") && !has_suffix(filename, "_FIXTURE.js"))
         namelist_add(lp, NULL, filename);
     return 0;
@@ -327,7 +327,7 @@ static int add_test_file(const char *filename, const struct stat *ptr, int flag)
 
 /* find js files from the directory tree and sort the list */
 static void enumerate_tests(const char *path) {
-    namelist_t *lp = &test_list;
+    NameList *lp = &test_list;
     int start = lp->count;
     ftw(path, add_test_file, 100);
     qsort(lp->array + start, lp->count - start, sizeof(*lp->array),
@@ -811,9 +811,9 @@ char *find_word(const char *str, const char *word) {
 
 /* handle exclude directories */
 void update_exclude_dirs(void) {
-    namelist_t *lp = &test_list;
-    namelist_t *ep = &exclude_list;
-    namelist_t *dp = &exclude_dir_list;
+    NameList *lp = &test_list;
+    NameList *ep = &exclude_list;
+    NameList *dp = &exclude_dir_list;
     char *name;
     int i, j, count;
 
@@ -1428,7 +1428,7 @@ void update_stats(JSRuntime *rt, const char *filename) {
 #undef update
 }
 
-int run_test_buf(const char *filename, char *harness, namelist_t *ip,
+int run_test_buf(const char *filename, char *harness, NameList *ip,
                  char *buf, size_t buf_len, const char *error_type,
                  int eval_flags, BOOL is_negative, BOOL is_async,
                  BOOL can_block) {
@@ -1495,7 +1495,7 @@ int run_test(const char *filename, int index) {
     int ret, eval_flags, use_strict, use_nostrict;
     BOOL is_negative, is_nostrict, is_onlystrict, is_async, is_module, skip;
     BOOL can_block;
-    namelist_t include_list = {0}, *ip = &include_list;
+    NameList include_list = {0}, *ip = &include_list;
 
     is_nostrict = is_onlystrict = is_negative = is_async = is_module = skip = FALSE;
     can_block = TRUE;
@@ -1794,7 +1794,7 @@ void show_progress(int force) {
 
 static int slow_test_threshold;
 
-void run_test_dir_list(namelist_t *lp, int start_index, int stop_index) {
+void run_test_dir_list(NameList *lp, int start_index, int stop_index) {
     int i;
 
     namelist_sort(lp);
