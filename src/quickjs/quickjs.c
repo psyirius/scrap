@@ -29,6 +29,7 @@
 
 #include "quickjs/utils/cutils.h"
 #include "quickjs/utils/list.h"
+#include "quickjs/utils/cstring.h"
 #include "quickjs/utils/libregexp.h"
 #include "quickjs/utils/common.h"
 #include "quickjs/debugger/debugger.h"
@@ -248,7 +249,7 @@ struct JSRuntime {
     JSMallocState malloc_state;
     const char *rt_info;
 
-    int atom_hash_size; /* power of two */
+    int atom_hash_size;    /* power of two */
     int atom_count;
     int atom_size;
     int atom_count_resize; /* resize hash table at this count */
@@ -368,11 +369,11 @@ typedef enum {
    reference count that can reference other GC objects. JS Objects are
    a particular type of GC object. */
 struct JSGCObjectHeader {
-    int ref_count; /* must come first, 32-bit */
+    int ref_count;      /* must come first, 32-bit */
     JSGCObjectTypeEnum gc_obj_type : 4;
-    uint8_t mark : 4; /* used by the GC */
-    uint8_t dummy1; /* not used by the GC */
-    uint16_t dummy2; /* not used by the GC */
+    uint8_t mark : 4;   /* used by the GC */
+    uint8_t dummy1;     /* not used by the GC */
+    uint16_t dummy2;    /* not used by the GC */
     ListNode link;
 };
 
@@ -433,7 +434,7 @@ struct JSContext {
     uint16_t binary_object_count;
     int binary_object_size;
 
-    JSShape *array_shape;   /* initial shape for Array objects */
+    JSShape *array_shape;    /* initial shape for Array objects */
 
     JSValue *class_proto;
     JSValue function_proto;
@@ -466,7 +467,7 @@ struct JSContext {
     int interrupt_counter;
     BOOL is_error_property_enabled;
 
-    ListNode loaded_modules;   /* list of JSModuleDef.link */
+    ListNode loaded_modules; /* list of JSModuleDef.link */
 
     /* if NULL, RegExp compilation is not supported */
     JSValue (*compile_regexp)(JSContext *ctx, JSValueConst pattern, JSValueConst flags);
@@ -526,7 +527,7 @@ typedef struct JSClosureVar {
     uint8_t is_const : 1;
     uint8_t is_lexical : 1;
     uint8_t var_kind : 4; /* see JSVarKindEnum */
-    
+
     /* 8 bits available */
     uint16_t var_idx; /* is_local = TRUE: index to a normal variable of the parent function.
                                otherwise: index to a closure variable of the parent function. */
@@ -684,26 +685,25 @@ typedef struct JSArrayBuffer {
 } JSArrayBuffer;
 
 typedef struct JSTypedArray {
-    ListNode link; /* link to arraybuffer */
-    JSObject *obj; /* back pointer to the TypedArray/DataView object */
+    ListNode link;    /* link to arraybuffer */
+    JSObject *obj;    /* back pointer to the TypedArray/DataView object */
     JSObject *buffer; /* based array buffer */
-    uint32_t offset; /* offset in the array buffer */
-    uint32_t length; /* length in the array buffer */
+    uint32_t offset;  /* offset in the array buffer */
+    uint32_t length;  /* length in the array buffer */
 } JSTypedArray;
 
 typedef struct JSAsyncFunctionState {
     JSValue this_val; /* 'this' generator argument */
-    int argc; /* number of function arguments */
-    BOOL throw_flag; /* used to throw an exception in JS_CallInternal() */
+    int argc;         /* number of function arguments */
+    BOOL throw_flag;  /* used to throw an exception in JS_CallInternal() */
     JSStackFrame frame;
 } JSAsyncFunctionState;
 
-/* XXX: could use an object instead to avoid the
-   JS_TAG_ASYNC_FUNCTION tag for the GC */
+/* XXX: could use an object instead to avoid the JS_TAG_ASYNC_FUNCTION tag for the GC */
 typedef struct JSAsyncFunctionData {
     JSGCObjectHeader header; /* must come first */
     JSValue resolving_funcs[2];
-    BOOL is_active; /* true if the async function state is valid */
+    BOOL is_active;          /* true if the async function state is valid */
     JSAsyncFunctionState func_state;
 } JSAsyncFunctionData;
 
@@ -756,7 +756,7 @@ typedef struct {
 
 typedef struct JSReqModuleEntry {
     JSAtom module_name;
-    JSModuleDef *module; /* used using resolution */
+    JSModuleDef *module; /* used resolution */
 } JSReqModuleEntry;
 
 typedef enum JSExportTypeEnum {
@@ -767,25 +767,24 @@ typedef enum JSExportTypeEnum {
 typedef struct JSExportEntry {
     union {
         struct {
-            int var_idx; /* closure variable index */
-            JSVarRef *var_ref; /* if != NULL, reference to the variable */
-        } local; /* for local export */
-        int req_module_idx; /* module for indirect export */
+            int var_idx;        /* closure variable index */
+            JSVarRef *var_ref;  /* if != NULL, reference to the variable */
+        } local;                /* for local export */
+        int req_module_idx;     /* module for indirect export */
     } u;
     JSExportTypeEnum export_type;
-    JSAtom local_name; /* '*' if export ns from. not used for local
-                          export after compilation */
-    JSAtom export_name; /* exported variable name */
+    JSAtom local_name;         /* '*' if export ns from. not used for local export after compilation */
+    JSAtom export_name;        /* exported variable name */
 } JSExportEntry;
 
 typedef struct JSStarExportEntry {
-    int req_module_idx; /* in req_module_entries */
+    int req_module_idx;       /* in req_module_entries */
 } JSStarExportEntry;
 
 typedef struct JSImportEntry {
-    int var_idx; /* closure variable index */
+    int var_idx;           /* closure variable index */
     JSAtom import_name;
-    int req_module_idx; /* in req_module_entries */
+    int req_module_idx;    /* in req_module_entries */
 } JSImportEntry;
 
 struct JSModuleDef {
@@ -810,18 +809,17 @@ struct JSModuleDef {
     int import_entries_size;
 
     JSValue module_ns;
-    JSValue func_obj; /* only used for JS modules */
-    JSModuleInitFunc *init_func; /* only used for C modules */
+    JSValue func_obj;             /* only used for JS modules */
+    JSModuleInitFunc *init_func;  /* only used for C modules */
     BOOL resolved : 8;
     BOOL func_created : 8;
     BOOL instantiated : 8;
     BOOL evaluated : 8;
-    BOOL eval_mark : 8; /* temporary use during js_evaluate_module() */
-    /* true if evaluation yielded an exception. It is saved in
-       eval_exception */
+    BOOL eval_mark : 8;           /* temporary use during js_evaluate_module() */
+    /* true if evaluation yielded an exception. It is saved in eval_exception */
     BOOL eval_has_exception : 8;
     JSValue eval_exception;
-    JSValue meta_obj; /* for import.meta */
+    JSValue meta_obj;             /* for import.meta */
 };
 
 typedef struct JSJobEntry {
@@ -834,51 +832,46 @@ typedef struct JSJobEntry {
 
 typedef struct JSProperty {
     union {
-        JSValue value;      /* JS_PROP_NORMAL */
-        struct {            /* JS_PROP_GETSET */
-            JSObject *getter; /* NULL if undefined */
-            JSObject *setter; /* NULL if undefined */
+        JSValue value;         /* JS_PROP_NORMAL */
+        struct {               /* JS_PROP_GETSET */
+            JSObject *getter;  /* NULL if undefined */
+            JSObject *setter;  /* NULL if undefined */
         } getset;
-        JSVarRef *var_ref;  /* JS_PROP_VARREF */
-        struct {            /* JS_PROP_AUTOINIT */
-            /* in order to use only 2 pointers, we compress the realm
-               and the init function pointer */
-            uintptr_t realm_and_id; /* realm and init_id (JS_AUTOINIT_ID_x)
-                                       in the 2 low bits */
+        JSVarRef *var_ref;     /* JS_PROP_VARREF */
+        struct {               /* JS_PROP_AUTOINIT */
+            /* in order to use only 2 pointers, we compress the realm and the init function pointer */
+            uintptr_t realm_and_id; /* realm and init_id (JS_AUTOINIT_ID_x) in the 2 low bits */
             void *opaque;
         } init;
     } u;
 } JSProperty;
 
 #define JS_PROP_INITIAL_SIZE 2
-#define JS_PROP_INITIAL_HASH_SIZE 4 /* must be a power of two */
+#define JS_PROP_INITIAL_HASH_SIZE 4  /* must be a power of two */
 #define JS_ARRAY_INITIAL_SIZE 2
 
 typedef struct JSShapeProperty {
-    uint32_t hash_next : 26; /* 0 if last in list */
-    uint32_t flags : 6;   /* JS_PROP_XXX */
-    JSAtom atom; /* JS_ATOM_NULL = free property entry */
+    uint32_t hash_next : 26;   /* 0 if last in list */
+    uint32_t flags : 6;        /* JS_PROP_XXX */
+    JSAtom atom;               /* JS_ATOM_NULL = free property entry */
 } JSShapeProperty;
 
 struct JSShape {
-    /* hash table of size hash_mask + 1 before the start of the
-       structure (see prop_hash_end()). */
+    /* hash table of size hash_mask + 1 before the start of the structure (see prop_hash_end()). */
     JSGCObjectHeader header;
-    /* true if the shape is inserted in the shape hash table. If not,
-       JSShape.hash is not valid */
+    /* true if the shape is inserted in the shape hash table. If not, JSShape.hash is not valid */
     uint8_t is_hashed;
     /* If true, the shape may have small array index properties 'n' with 0
-       <= n <= 2^31-1. If false, the shape is guaranteed not to have
-       small array index properties */
+       <= n <= 2^31-1. If false, the shape is guaranteed not to have small array index properties */
     uint8_t has_small_array_index;
-    uint32_t hash; /* current hash value */
+    uint32_t hash;       /* current hash value */
     uint32_t prop_hash_mask;
-    int prop_size; /* allocated properties */
-    int prop_count; /* include deleted properties */
+    int prop_size;      /* allocated properties */
+    int prop_count;     /* include deleted properties */
     int deleted_prop_count;
     JSShape *shape_hash_next; /* in JSRuntime.shape_hash[h] list */
     JSObject *proto;
-    JSShapeProperty prop[0]; /* prop_size elements */
+    JSShapeProperty prop[0];  /* prop_size elements */
 };
 
 struct JSObject {
@@ -886,17 +879,25 @@ struct JSObject {
         JSGCObjectHeader header;
         struct {
             int __gc_ref_count; /* corresponds to header.ref_count */
-            uint8_t __gc_mark; /* corresponds to header.mark/gc_obj_type */
+            uint8_t __gc_mark;  /* corresponds to header.mark/gc_obj_type */
 
             uint8_t extensible : 1;
-            uint8_t free_mark : 1; /* only used when freeing objects with cycles */
-            uint8_t is_exotic : 1; /* TRUE if object has exotic property handlers */
-            uint8_t fast_array : 1; /* TRUE if u.array is used for get/put (for JS_CLASS_ARRAY, JS_CLASS_ARGUMENTS and typed arrays) */
-            uint8_t is_constructor : 1; /* TRUE if object is a constructor function */
-            uint8_t is_uncatchable_error : 1; /* if TRUE, error is not catchable */
-            uint8_t tmp_mark : 1; /* used in JS_WriteObjectRec() */
-            uint8_t is_HTMLDDA : 1; /* specific annex B IsHtmlDDA behavior */
-            uint16_t class_id; /* see JS_CLASS_x */
+            /* only used when freeing objects with cycles */
+            uint8_t free_mark : 1;
+            /* TRUE if object has exotic property handlers */
+            uint8_t is_exotic : 1;
+            /* TRUE if u.array is used for get/put (for JS_CLASS_ARRAY, JS_CLASS_ARGUMENTS and typed arrays) */
+            uint8_t fast_array : 1;
+            /* TRUE if object is a constructor function */
+            uint8_t is_constructor : 1;
+            /* if TRUE, error is not catchable */
+            uint8_t is_uncatchable_error : 1;
+            /* used in JS_WriteObjectRec() */
+            uint8_t tmp_mark : 1;
+            /* specific annex B IsHtmlDDA behavior */
+            uint8_t is_HTMLDDA : 1;
+            /* see JS_CLASS_x */
+            uint16_t class_id;
         };
     };
     /* byte offsets: 16/24 */
@@ -1234,13 +1235,22 @@ JSValue js_global_isFinite(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 static
 JSValue js___date_clock(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
 
+static
+JSValue js_string_constructor(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
+
+static
+JSValue js_boolean_constructor(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
+
+static
+JSValue js_number_constructor(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
+
 /* Object List */
 #include "./internals/object-list-inl.h"
 
 /* Bytecode reader, writer, etc., */
 #include "./internals/bytecode-inl.h"
 
-/* runtime functions & objects */
+/* Runtime functions & objects */
 #include "./internals/rt-objects-inl.h"
 
 /* Object */

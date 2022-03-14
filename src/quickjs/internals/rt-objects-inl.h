@@ -1,59 +1,50 @@
 /* runtime functions & objects */
 
-static JSValue js_string_constructor(JSContext *ctx, JSValueConst this_val,
-                                     int argc, JSValueConst *argv);
-static JSValue js_boolean_constructor(JSContext *ctx, JSValueConst this_val,
-                                      int argc, JSValueConst *argv);
-static JSValue js_number_constructor(JSContext *ctx, JSValueConst this_val,
-                                     int argc, JSValueConst *argv);
-
-static int check_function(JSContext *ctx, JSValueConst obj)
-{
+static
+int check_function(JSContext *ctx, JSValueConst obj) {
     if (likely(JS_IsFunction(ctx, obj)))
         return 0;
+
     JS_ThrowTypeError(ctx, "not a function");
+
     return -1;
 }
 
-static int check_exception_free(JSContext *ctx, JSValue obj)
-{
+static
+int check_exception_free(JSContext *ctx, JSValue obj) {
     JS_FreeValue(ctx, obj);
     return JS_IsException(obj);
 }
 
-static JSAtom find_atom(JSContext *ctx, const char *name)
-{
-    JSAtom atom;
-    int len;
-
+static
+JSAtom find_atom(JSContext *ctx, const char *name) {
     if (*name == '[') {
         name++;
-        len = strlen(name) - 1;
-        /* We assume 8 bit non null strings, which is the case for these
-           symbols */
-        for(atom = JS_ATOM_Symbol_toPrimitive; atom < JS_ATOM_END; atom++) {
-            JSAtomStruct *p = ctx->rt->atom_array[atom];
-            JSString *str = p;
-            if (str->len == len && !memcmp(str->u.str8, name, len))
+
+        size_t len = CString.length(name) - 1;
+
+        /* We assume 8 bit non-null strings, which is the case for these symbols */
+        for(JSAtom atom = JS_ATOM_Symbol_toPrimitive; atom < JS_ATOM_END; ++atom) {
+            JSString *str = (JSString *) ctx->rt->atom_array[atom];
+            if (str->len == len && !memcmp(str->u.str8, name, len)) {
                 return JS_DupAtom(ctx, atom);
+            }
         }
         abort();
     } else {
-        atom = JS_NewAtom(ctx, name);
+        return JS_NewAtom(ctx, name);
     }
-    return atom;
 }
 
-static JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
-                                               JSAtom atom, void *opaque)
-{
-    const JSCFunctionListEntry *e = opaque;
+static
+JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p, JSAtom atom, void *opaque) {
+    const JSCFunctionListEntry *e = (const JSCFunctionListEntry *) opaque;
     JSValue val;
 
     switch(e->def_type) {
         case JS_DEF_CFUNC:
-            val = JS_NewCFunction2(ctx, e->u.func.cfunc.generic,
-                                   e->name, e->u.func.length, e->u.func.cproto, e->magic);
+            val = JS_NewCFunction2(ctx, e->u.func.cfunc.generic, e->name,
+                                   e->u.func.length, e->u.func.cproto, e->magic);
             break;
         case JS_DEF_PROP_STRING:
             val = JS_NewAtomString(ctx, e->u.str);
@@ -65,13 +56,12 @@ static JSValue JS_InstantiateFunctionListItem2(JSContext *ctx, JSObject *p,
         default:
             abort();
     }
+
     return val;
 }
 
-static int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj,
-                                          JSAtom atom,
-                                          const JSCFunctionListEntry *e)
-{
+static
+int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj, JSAtom atom, const JSCFunctionListEntry *e) {
     JSValue val;
     int prop_flags = e->prop_flags;
 
@@ -110,8 +100,7 @@ static int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj,
                 /* Function.prototype[Symbol.hasInstance] is not writable nor configurable */
                 prop_flags = 0;
             }
-            JS_DefineAutoInitProperty(ctx, obj, atom, JS_AUTOINIT_ID_PROP,
-                                      (void *)e, prop_flags);
+            JS_DefineAutoInitProperty(ctx, obj, atom, JS_AUTOINIT_ID_PROP, (void *)e, prop_flags);
             return 0;
         case JS_DEF_CGETSET: /* XXX: use autoinit again ? */
         case JS_DEF_CGETSET_MAGIC:
@@ -122,15 +111,15 @@ static int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj,
             getter = JS_UNDEFINED;
             if (e->u.getset.get.generic) {
                 snprintf(buf, sizeof(buf), "get %s", e->name);
-                getter = JS_NewCFunction2(ctx, e->u.getset.get.generic,
-                                          buf, 0, e->def_type == JS_DEF_CGETSET_MAGIC ? JS_CFUNC_getter_magic : JS_CFUNC_getter,
+                getter = JS_NewCFunction2(ctx, e->u.getset.get.generic, buf, 0,
+                                          e->def_type == JS_DEF_CGETSET_MAGIC ? JS_CFUNC_getter_magic : JS_CFUNC_getter,
                                           e->magic);
             }
             setter = JS_UNDEFINED;
             if (e->u.getset.set.generic) {
                 snprintf(buf, sizeof(buf), "set %s", e->name);
-                setter = JS_NewCFunction2(ctx, e->u.getset.set.generic,
-                                          buf, 1, e->def_type == JS_DEF_CGETSET_MAGIC ? JS_CFUNC_setter_magic : JS_CFUNC_setter,
+                setter = JS_NewCFunction2(ctx, e->u.getset.set.generic, buf, 1,
+                                          e->def_type == JS_DEF_CGETSET_MAGIC ? JS_CFUNC_setter_magic : JS_CFUNC_setter,
                                           e->magic);
             }
             JS_DefinePropertyGetSet(ctx, obj, atom, getter, setter, prop_flags);
@@ -151,8 +140,7 @@ static int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj,
             break;
         case JS_DEF_PROP_STRING:
         case JS_DEF_OBJECT:
-            JS_DefineAutoInitProperty(ctx, obj, atom, JS_AUTOINIT_ID_PROP,
-                                      (void *)e, prop_flags);
+            JS_DefineAutoInitProperty(ctx, obj, atom, JS_AUTOINIT_ID_PROP, (void *)e, prop_flags);
             return 0;
         default:
             abort();
@@ -161,12 +149,8 @@ static int JS_InstantiateFunctionListItem(JSContext *ctx, JSValueConst obj,
     return 0;
 }
 
-void JS_SetPropertyFunctionList(JSContext *ctx, JSValueConst obj,
-                                const JSCFunctionListEntry *tab, int len)
-{
-    int i;
-
-    for (i = 0; i < len; i++) {
+void JS_SetPropertyFunctionList(JSContext *ctx, JSValueConst obj, const JSCFunctionListEntry *tab, int len) {
+    for (int i = 0; i < len; i++) {
         const JSCFunctionListEntry *e = &tab[i];
         JSAtom atom = find_atom(ctx, e->name);
         JS_InstantiateFunctionListItem(ctx, obj, atom, e);
@@ -174,29 +158,24 @@ void JS_SetPropertyFunctionList(JSContext *ctx, JSValueConst obj,
     }
 }
 
-int JS_AddModuleExportList(JSContext *ctx, JSModuleDef *m,
-                           const JSCFunctionListEntry *tab, int len)
-{
-    int i;
-    for(i = 0; i < len; i++) {
+int JS_AddModuleExportList(JSContext *ctx, JSModuleDef *m, const JSCFunctionListEntry *tab, int len) {
+    for(int i = 0; i < len; i++) {
         if (JS_AddModuleExport(ctx, m, tab[i].name))
             return -1;
     }
+
     return 0;
 }
 
-int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m,
-                           const JSCFunctionListEntry *tab, int len)
-{
-    int i;
+int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m, const JSCFunctionListEntry *tab, int len) {
     JSValue val;
 
-    for(i = 0; i < len; i++) {
+    for(int i = 0; i < len; i++) {
         const JSCFunctionListEntry *e = &tab[i];
         switch(e->def_type) {
             case JS_DEF_CFUNC:
-                val = JS_NewCFunction2(ctx, e->u.func.cfunc.generic,
-                                       e->name, e->u.func.length, e->u.func.cproto, e->magic);
+                val = JS_NewCFunction2(ctx, e->u.func.cfunc.generic, e->name,
+                                       e->u.func.length, e->u.func.cproto, e->magic);
                 break;
             case JS_DEF_PROP_STRING:
                 val = JS_NewString(ctx, e->u.str);
@@ -220,59 +199,43 @@ int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m,
         if (JS_SetModuleExport(ctx, m, e->name, val))
             return -1;
     }
+
     return 0;
 }
 
 /* Note: 'func_obj' is not necessarily a constructor */
-static void JS_SetConstructor2(JSContext *ctx,
-                               JSValueConst func_obj,
-                               JSValueConst proto,
-                               int proto_flags, int ctor_flags)
-{
-    JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_prototype,
-                           JS_DupValue(ctx, proto), proto_flags);
-    JS_DefinePropertyValue(ctx, proto, JS_ATOM_constructor,
-                           JS_DupValue(ctx, func_obj),
-                           ctor_flags);
+static
+void JS_SetConstructor2(JSContext *ctx, JSValueConst func_obj, JSValueConst proto, int proto_flags, int ctor_flags) {
+    JS_DefinePropertyValue(ctx, func_obj, JS_ATOM_prototype, JS_DupValue(ctx, proto), proto_flags);
+    JS_DefinePropertyValue(ctx, proto, JS_ATOM_constructor, JS_DupValue(ctx, func_obj), ctor_flags);
     set_cycle_flag(ctx, func_obj);
     set_cycle_flag(ctx, proto);
 }
 
-void JS_SetConstructor(JSContext *ctx, JSValueConst func_obj,
-                       JSValueConst proto)
-{
-    JS_SetConstructor2(ctx, func_obj, proto,
-                       0, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+void JS_SetConstructor(JSContext *ctx, JSValueConst func_obj, JSValueConst proto) {
+    JS_SetConstructor2(ctx, func_obj, proto, 0, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
 }
 
-static void JS_NewGlobalCConstructor2(JSContext *ctx,
-                                      JSValue func_obj,
-                                      const char *name,
-                                      JSValueConst proto)
-{
-    JS_DefinePropertyValueStr(ctx, ctx->global_obj, name,
-                              JS_DupValue(ctx, func_obj),
-                              JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+static
+void JS_NewGlobalCConstructor2(JSContext *ctx, JSValue func_obj, const char *name, JSValueConst proto) {
+    JS_DefinePropertyValueStr(
+            ctx, ctx->global_obj, name, JS_DupValue(ctx, func_obj), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
     JS_SetConstructor(ctx, func_obj, proto);
     JS_FreeValue(ctx, func_obj);
 }
 
-static JSValueConst JS_NewGlobalCConstructor(JSContext *ctx, const char *name,
-                                             JSCFunction *func, int length,
-                                             JSValueConst proto)
-{
-    JSValue func_obj;
-    func_obj = JS_NewCFunction2(ctx, func, name, length, JS_CFUNC_constructor_or_func, 0);
+static
+JSValueConst JS_NewGlobalCConstructor(JSContext *ctx, const char *name, JSCFunction *func,
+                                      int length, JSValueConst proto) {
+    JSValue func_obj = JS_NewCFunction2(ctx, func, name, length, JS_CFUNC_constructor_or_func, 0);
     JS_NewGlobalCConstructor2(ctx, func_obj, name, proto);
     return func_obj;
 }
 
-static JSValueConst JS_NewGlobalCConstructorOnly(JSContext *ctx, const char *name,
-                                                 JSCFunction *func, int length,
-                                                 JSValueConst proto)
-{
-    JSValue func_obj;
-    func_obj = JS_NewCFunction2(ctx, func, name, length, JS_CFUNC_constructor, 0);
+static
+JSValueConst JS_NewGlobalCConstructorOnly(JSContext *ctx, const char *name, JSCFunction *func,
+                                          int length, JSValueConst proto) {
+    JSValue func_obj = JS_NewCFunction2(ctx, func, name, length, JS_CFUNC_constructor, 0);
     JS_NewGlobalCConstructor2(ctx, func_obj, name, proto);
     return func_obj;
 }

@@ -1,7 +1,5 @@
-/*******************************************************************/
 /* binary object writer & reader */
-
-typedef enum BCTagEnum {
+typedef enum {
     BC_TAG_NULL = 1,
     BC_TAG_UNDEFINED,
     BC_TAG_BOOL_FALSE,
