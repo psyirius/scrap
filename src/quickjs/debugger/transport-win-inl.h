@@ -1,9 +1,5 @@
 #ifdef CONFIG_DEBUGGER
 
-#ifdef __MSYS__
-#define __INSIDE_CYGWIN_NET__ 1
-#endif
-
 #include "quickjs/debugger/debugger.h"
 
 #include <winsock2.h>
@@ -74,9 +70,9 @@ size_t js_transport_peek(void* udata) {
   FD_SET(data->handle, &fds);
 
   select_rc = select(data->handle + 1, &fds, NULL, NULL, 0);
-  if(select_rc < 0)
+  if (select_rc < 0)
     return -2;
-  if(select_rc > 1)
+  if (select_rc > 1)
     return -3;
   // no data
   if(select_rc == 0)
@@ -95,50 +91,69 @@ void js_transport_close(JSRuntime* rt, void* udata) {
   free(udata);
 }
 
-// todo: fixup asserts to return errors.
+static
+long str_to_int(char* str, int base) {
+    char *end_ptr = 0;
+    return strtol(str, &end_ptr, base);
+}
+
+static
+int win_sock_init() {
+    WSADATA wsaData;
+    return WSAStartup(MAKEWORD(1, 1), &wsaData);
+}
+
+// TODO: fixup asserts to return errors.
 static
 struct sockaddr_in js_debugger_parse_sockaddr(const char* address) {
-  char* port_string = strstr(address, ":");
-  assert(port_string);
+    // should init WSA first
+    int err = win_sock_init();
+    if (err != 0) {
+        fprintf(stderr, "Error %d in win_sock_init\n", err);
+        fflush(stderr);
+        exit(100);
+    }
 
-  int port = atoi(port_string + 1);
-  assert(port);
+    char* port_string = strstr(address, ":");
+    assert(port_string);
 
-  char host_string[256];
-  strcpy(host_string, address);
-  host_string[port_string - address] = 0;
+    int port = str_to_int(port_string + 1, 10);
+    assert(port);
 
-  struct hostent* host = gethostbyname(host_string);
-  assert(host);
-  struct sockaddr_in addr;
+    char host_string[256];
+    strcpy(host_string, address);
+    host_string[port_string - address] = 0;
 
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  memcpy((char*)&addr.sin_addr.s_addr, (char*)host->h_addr, host->h_length);
-  addr.sin_port = htons(port);
+    struct hostent* host = gethostbyname(host_string);
+    assert(host != 0);
+    struct sockaddr_in addr;
 
-  return addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    memcpy((char*)&addr.sin_addr.s_addr, (char*)host->h_addr, host->h_length);
+    addr.sin_port = htons(port);
+
+    return addr;
 }
 
 void js_debugger_connect(JSContext* ctx, const char* address) {
   struct sockaddr_in addr = js_debugger_parse_sockaddr(address);
 
-  int client = socket(AF_INET, SOCK_STREAM, 0);
+  SOCKET client = socket(AF_INET, SOCK_STREAM, 0);
   assert(client > 0);
 
-  assert(!connect(client, (const struct sockaddr*)&addr, sizeof(addr)));
+  assert(connect(client, (const struct sockaddr*)&addr, sizeof(addr)) == 0);
 
   JS_DebuggerTransportData* data = (JS_DebuggerTransportData*) malloc(sizeof(JS_DebuggerTransportData));
   memset(data, 0, sizeof(JS_DebuggerTransportData));
-  data->handle = client;
+  data->handle = (int) client;
   js_debugger_attach(ctx, js_transport_read, js_transport_write, js_transport_peek, js_transport_close, data);
 }
 
-void
-js_debugger_wait_connection(JSContext* ctx, const char* address) {
+void js_debugger_wait_connection(JSContext* ctx, const char* address) {
   struct sockaddr_in addr = js_debugger_parse_sockaddr(address);
 
-  int server = socket(AF_INET, SOCK_STREAM, 0);
+  SOCKET server = socket(AF_INET, SOCK_STREAM, 0);
   assert(server >= 0);
 
   int reuseAddress = 1;
@@ -150,13 +165,13 @@ js_debugger_wait_connection(JSContext* ctx, const char* address) {
 
   struct sockaddr_in client_addr;
   int client_addr_size = sizeof(addr);
-  int client = accept(server, (struct sockaddr*)&client_addr, &client_addr_size);
+  SOCKET client = accept(server, (struct sockaddr*)&client_addr, &client_addr_size);
   closesocket(server);
   assert(client >= 0);
 
   JS_DebuggerTransportData* data = (JS_DebuggerTransportData*)malloc(sizeof(JS_DebuggerTransportData));
   memset(data, 0, sizeof(JS_DebuggerTransportData));
-  data->handle = client;
+  data->handle = (int) client;
   js_debugger_attach(ctx, js_transport_read, js_transport_write, js_transport_peek, js_transport_close, data);
 }
 

@@ -355,8 +355,7 @@ void help(void) {
 
 #if defined(CONFIG_CC) && !defined(_WIN32)
 
-int exec_cmd(char **argv)
-{
+int exec_cmd(char **argv) {
     int pid, status, ret;
 
     pid = fork();
@@ -445,8 +444,8 @@ static int output_executable(const char *out_filename, const char *cfilename,
 }
 #else
 
-static int output_executable(const char *out_filename, const char *cfilename,
-                             BOOL use_lto, BOOL verbose, const char *exename) {
+static
+int output_executable(const char *out_filename, const char *cfilename, BOOL use_lto, BOOL verbose, const char *exename) {
     fprintf(stderr, "Executable output is not supported for this target\n");
     exit(1);
     return 0;
@@ -623,7 +622,7 @@ int main(int argc, char **argv) {
     fprintf(file,
         "/* Inline Bytecode Buffer js files */\n"
         "/* This file is generated at compile-time by the QuickJS compiler - do not edit */\n"
-        "\n", cname
+        "\n"
     );
 
     if (output_type != OUTPUT_C) {
@@ -640,6 +639,10 @@ int main(int argc, char **argv) {
 
     for (i = optind; i < argc; i++) {
         const char *filename = argv[i];
+        fprintf(file,
+            "/* Compiled from : %s */\n"
+            "\n", filename
+        );
         compile_file(ctx, file, filename, cname, module);
         cname = NULL;
     }

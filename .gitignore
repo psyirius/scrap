@@ -1,6 +1,7 @@
 .idea/
 .vs/
 .vscode/
+!.vscode/launch.json
 
 /node_modules/
 /build/

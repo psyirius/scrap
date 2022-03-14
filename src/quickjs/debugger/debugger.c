@@ -684,7 +684,7 @@ void js_debugger_check(JSContext* ctx, const uint8_t *cur_pc) {
 
     fail:
     js_debugger_free(JS_GetRuntime(ctx), info);
-    done:
+done:
     info->is_debugging = 0;
     info->ctx = NULL;
 }
