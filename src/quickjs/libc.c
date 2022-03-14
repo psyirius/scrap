@@ -483,6 +483,8 @@ char* dll_error(char* msg, size_t* size) {
     );
 
     assert(mz == *size);
+    
+    msg[mz] = '\0';
     *size = mz;
 
     return msg;
@@ -525,7 +527,7 @@ JSModuleDef *js_module_loader_so(JSContext *ctx, const char *module_name) {
     js_free(ctx, filename);
 
     if (!hd) {
-        char err_msg[256] = {0};
+        char err_msg[0x100];
         size_t err_msg_sz = sizeof(err_msg);
         JS_ThrowReferenceError(ctx, "could not load module '%s': %s", filename, dll_error(err_msg, &err_msg_sz));
         goto fail;
