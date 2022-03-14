@@ -1,26 +1,5 @@
 /*
  * Generation of Unicode tables
- *
- * Copyright (c) 2017-2018 Fabrice Bellard
- * Copyright (c) 2017-2018 Charlie Gordon
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
  */
 #include <stdlib.h>
 #include <stdio.h>
@@ -31,7 +10,7 @@
 #include <ctype.h>
 #include <time.h>
 
-#include "quickjs/cutils.h"
+#include "quickjs/utils/cutils.h"
 
 /* define it to be able to test unicode.c */
 //#define USE_TEST
@@ -54,7 +33,7 @@
    Decomposition:
    - Greek lower case (+1f10/1f10) ?
    - allow holes in B runs
-   - suppress more upper / lower case redundancy
+   - suppress upper/lower case redundancy
 */
 
 #ifdef USE_TEST
@@ -64,18 +43,15 @@
 #define CHARCODE_MAX 0x10ffff
 #define CC_LEN_MAX 3
 
-void *mallocz(size_t size)
-{
-    void *ptr;
-    ptr = malloc(size);
-    memset(ptr, 0, size);
+void *zalloc(size_t size) {
+    void *ptr = malloc(size);
+    memset(ptr, '\0', size);
     return ptr;
 }
 
-const char *get_field(const char *p, int n)
-{
+const char *get_field(const char *p, int n) {
     int i;
-    for(i = 0; i < n; i++) {
+    for (i = 0; i < n; i++) {
         while (*p != ';' && *p != '\0')
             p++;
         if (*p == '\0')
@@ -85,8 +61,7 @@ const char *get_field(const char *p, int n)
     return p;
 }
 
-const char *get_field_buf(char *buf, size_t buf_size, const char *p, int n)
-{
+const char *get_field_buf(char *buf, size_t buf_size, const char *p, int n) {
     char *q;
     p = get_field(p, n);
     q = buf;
@@ -99,8 +74,7 @@ const char *get_field_buf(char *buf, size_t buf_size, const char *p, int n)
     return buf;
 }
 
-void add_char(int **pbuf, int *psize, int *plen, int c)
-{
+void add_char(int **pbuf, int *psize, int *plen, int c) {
     int len, size, *buf;
     buf = *pbuf;
     size = *psize;
@@ -116,8 +90,7 @@ void add_char(int **pbuf, int *psize, int *plen, int c)
     *plen = len;
 }
 
-int *get_field_str(int *plen, const char *str, int n)
-{
+int *get_field_str(int *plen, const char *str, int n) {
     const char *p;
     int *buf, len, size;
     p = get_field(str, n);
@@ -128,19 +101,18 @@ int *get_field_str(int *plen, const char *str, int n)
     len = 0;
     size = 0;
     buf = NULL;
-    for(;;) {
+    for (;;) {
         while (isspace(*p))
             p++;
         if (!isxdigit(*p))
             break;
-        add_char(&buf, &size, &len, strtoul(p, (char **)&p, 16));
+        add_char(&buf, &size, &len, strtoul(p, (char **) &p, 16));
     }
     *plen = len;
     return buf;
 }
 
-char *get_line(char *buf, int buf_size, FILE *f)
-{
+char *get_line(char *buf, int buf_size, FILE *f) {
     int len;
     if (!fgets(buf, buf_size, f))
         return NULL;
@@ -154,20 +126,26 @@ char *get_line(char *buf, int buf_size, FILE *f)
 
 typedef enum {
 #define DEF(id, str) GCAT_ ## id,
+
 #include "unicode_gen_def.h"
+
 #undef DEF
     GCAT_COUNT,
 } UnicodeGCEnum1;
 
 static const char *unicode_gc_name[] = {
 #define DEF(id, str) #id,
+
 #include "unicode_gen_def.h"
+
 #undef DEF
 };
 
 static const char *unicode_gc_short_name[] = {
 #define DEF(id, str) str,
+
 #include "unicode_gen_def.h"
+
 #undef DEF
 };
 
@@ -177,20 +155,26 @@ static const char *unicode_gc_short_name[] = {
 
 typedef enum {
 #define DEF(id, str) SCRIPT_ ## id,
+
 #include "unicode_gen_def.h"
+
 #undef DEF
     SCRIPT_COUNT,
 } UnicodeScriptEnum1;
 
 static const char *unicode_script_name[] = {
 #define DEF(id, str) #id,
+
 #include "unicode_gen_def.h"
+
 #undef DEF
 };
 
 const char *unicode_script_short_name[] = {
 #define DEF(id, str) str,
+
 #include "unicode_gen_def.h"
+
 #undef DEF
 };
 
@@ -200,20 +184,26 @@ const char *unicode_script_short_name[] = {
 
 typedef enum {
 #define DEF(id, str) PROP_ ## id,
+
 #include "unicode_gen_def.h"
+
 #undef DEF
     PROP_COUNT,
 } UnicodePropEnum1;
 
 static const char *unicode_prop_name[] = {
 #define DEF(id, str) #id,
+
 #include "unicode_gen_def.h"
+
 #undef DEF
 };
 
 static const char *unicode_prop_short_name[] = {
 #define DEF(id, str) str,
+
 #include "unicode_gen_def.h"
+
 #undef DEF
 };
 
@@ -228,13 +218,14 @@ typedef struct {
     int f_code;
 
     uint8_t combining_class;
-    uint8_t is_compat:1;
-    uint8_t is_excluded:1;
+    uint8_t is_compat: 1;
+    uint8_t is_excluded: 1;
     uint8_t general_category;
     uint8_t script;
     uint8_t script_ext_len;
     uint8_t *script_ext;
     uint32_t prop_bitmap_tab[3];
+
     /* decomposition */
     int decomp_len;
     int *decomp_data;
@@ -242,15 +233,14 @@ typedef struct {
 
 CCInfo *unicode_db;
 
-int find_name(const char **tab, int tab_len, const char *name)
-{
+int find_name(const char **tab, int tab_len, const char *name) {
     int i, len, name_len;
     const char *p, *r;
 
     name_len = strlen(name);
-    for(i = 0; i < tab_len; i++) {
+    for (i = 0; i < tab_len; i++) {
         p = tab[i];
-        for(;;) {
+        for (;;) {
             r = strchr(p, ',');
             if (!r)
                 len = strlen(p);
@@ -266,23 +256,20 @@ int find_name(const char **tab, int tab_len, const char *name)
     return -1;
 }
 
-static int get_prop(uint32_t c, int prop_idx)
-{
+static int get_prop(uint32_t c, int prop_idx) {
     return (unicode_db[c].prop_bitmap_tab[prop_idx >> 5] >> (prop_idx & 0x1f)) & 1;
 }
 
-static void set_prop(uint32_t c, int prop_idx, int val)
-{
+static void set_prop(uint32_t c, int prop_idx, int val) {
     uint32_t mask;
     mask = 1U << (prop_idx & 0x1f);
     if (val)
         unicode_db[c].prop_bitmap_tab[prop_idx >> 5] |= mask;
     else
-        unicode_db[c].prop_bitmap_tab[prop_idx >> 5]  &= ~mask;
+        unicode_db[c].prop_bitmap_tab[prop_idx >> 5] &= ~mask;
 }
 
-void parse_unicode_data(const char *filename)
-{
+void parse_unicode_data(const char *filename) {
     FILE *f;
     char line[1024];
     char buf1[256];
@@ -297,7 +284,7 @@ void parse_unicode_data(const char *filename)
     }
 
     last_code = 0;
-    for(;;) {
+    for (;;) {
         if (!get_line(line, sizeof(line), f))
             break;
         p = line;
@@ -373,12 +360,12 @@ void parse_unicode_data(const char *filename)
                 ci->is_compat = 1;
             }
             size = 0;
-            for(;;) {
+            for (;;) {
                 while (isspace(*p))
                     p++;
                 if (!isxdigit(*p))
                     break;
-                add_char(&ci->decomp_data, &size, &ci->decomp_len, strtoul(p, (char **)&p, 16));
+                add_char(&ci->decomp_data, &size, &ci->decomp_len, strtoul(p, (char **) &p, 16));
             }
 #if 0
             {
@@ -408,7 +395,7 @@ void parse_unicode_data(const char *filename)
             //            printf("range: 0x%x-%0x\n", last_code, code);
             assert(ci->decomp_len == 0);
             assert(ci->script_ext_len == 0);
-            for(i = last_code + 1; i < code; i++) {
+            for (i = last_code + 1; i < code; i++) {
                 unicode_db[i] = *ci;
             }
         }
@@ -418,8 +405,7 @@ void parse_unicode_data(const char *filename)
     fclose(f);
 }
 
-void parse_special_casing(CCInfo *tab, const char *filename)
-{
+void parse_special_casing(CCInfo *tab, const char *filename) {
     FILE *f;
     char line[1024];
     const char *p;
@@ -432,7 +418,7 @@ void parse_special_casing(CCInfo *tab, const char *filename)
         exit(1);
     }
 
-    for(;;) {
+    for (;;) {
         if (!get_line(line, sizeof(line), f))
             break;
         p = line;
@@ -461,13 +447,13 @@ void parse_special_casing(CCInfo *tab, const char *filename)
         p = get_field(line, 1);
         if (p && *p != ';') {
             ci->l_len = 0;
-            for(;;) {
+            for (;;) {
                 while (isspace(*p))
                     p++;
                 if (*p == ';')
                     break;
                 assert(ci->l_len < CC_LEN_MAX);
-                ci->l_data[ci->l_len++] = strtoul(p, (char **)&p, 16);
+                ci->l_data[ci->l_len++] = strtoul(p, (char **) &p, 16);
             }
 
             if (ci->l_len == 1 && ci->l_data[0] == code)
@@ -477,13 +463,13 @@ void parse_special_casing(CCInfo *tab, const char *filename)
         p = get_field(line, 3);
         if (p && *p != ';') {
             ci->u_len = 0;
-            for(;;) {
+            for (;;) {
                 while (isspace(*p))
                     p++;
                 if (*p == ';')
                     break;
                 assert(ci->u_len < CC_LEN_MAX);
-                ci->u_data[ci->u_len++] = strtoul(p, (char **)&p, 16);
+                ci->u_data[ci->u_len++] = strtoul(p, (char **) &p, 16);
             }
 
             if (ci->u_len == 1 && ci->u_data[0] == code)
@@ -494,8 +480,7 @@ void parse_special_casing(CCInfo *tab, const char *filename)
     fclose(f);
 }
 
-void parse_case_folding(CCInfo *tab, const char *filename)
-{
+void parse_case_folding(CCInfo *tab, const char *filename) {
     FILE *f;
     char line[1024];
     const char *p;
@@ -508,7 +493,7 @@ void parse_case_folding(CCInfo *tab, const char *filename)
         exit(1);
     }
 
-    for(;;) {
+    for (;;) {
         if (!get_line(line, sizeof(line), f))
             break;
         p = line;
@@ -543,8 +528,7 @@ void parse_case_folding(CCInfo *tab, const char *filename)
     fclose(f);
 }
 
-void parse_composition_exclusions(const char *filename)
-{
+void parse_composition_exclusions(const char *filename) {
     FILE *f;
     char line[4096], *p;
     uint32_t c0;
@@ -555,7 +539,7 @@ void parse_composition_exclusions(const char *filename)
         exit(1);
     }
 
-    for(;;) {
+    for (;;) {
         if (!get_line(line, sizeof(line), f))
             break;
         p = line;
@@ -563,15 +547,14 @@ void parse_composition_exclusions(const char *filename)
             p++;
         if (*p == '#' || *p == '@' || *p == '\0')
             continue;
-        c0 = strtoul(p, (char **)&p, 16);
+        c0 = strtoul(p, (char **) &p, 16);
         assert(c0 > 0 && c0 <= CHARCODE_MAX);
         unicode_db[c0].is_excluded = TRUE;
     }
     fclose(f);
 }
 
-void parse_derived_core_properties(const char *filename)
-{
+void parse_derived_core_properties(const char *filename) {
     FILE *f;
     char line[4096], *p, buf[256], *q;
     uint32_t c0, c1, c;
@@ -583,7 +566,7 @@ void parse_derived_core_properties(const char *filename)
         exit(1);
     }
 
-    for(;;) {
+    for (;;) {
         if (!get_line(line, sizeof(line), f))
             break;
         p = line;
@@ -591,10 +574,10 @@ void parse_derived_core_properties(const char *filename)
             p++;
         if (*p == '#' || *p == '@' || *p == '\0')
             continue;
-        c0 = strtoul(p, (char **)&p, 16);
+        c0 = strtoul(p, (char **) &p, 16);
         if (*p == '.' && p[1] == '.') {
             p += 2;
-            c1 = strtoul(p, (char **)&p, 16);
+            c1 = strtoul(p, (char **) &p, 16);
         } else {
             c1 = c0;
         }
@@ -618,17 +601,16 @@ void parse_derived_core_properties(const char *filename)
                 fprintf(stderr, "Property not found: %s\n", buf);
                 exit(1);
             }
-            for(c = c0; c <= c1; c++) {
+            for (c = c0; c <= c1; c++) {
                 set_prop(c, i, 1);
             }
-next: ;
+            next:;
         }
     }
     fclose(f);
 }
 
-void parse_derived_norm_properties(const char *filename)
-{
+void parse_derived_norm_properties(const char *filename) {
     FILE *f;
     char line[4096], *p, buf[256], *q;
     uint32_t c0, c1, c;
@@ -639,7 +621,7 @@ void parse_derived_norm_properties(const char *filename)
         exit(1);
     }
 
-    for(;;) {
+    for (;;) {
         if (!get_line(line, sizeof(line), f))
             break;
         p = line;
@@ -647,10 +629,10 @@ void parse_derived_norm_properties(const char *filename)
             p++;
         if (*p == '#' || *p == '@' || *p == '\0')
             continue;
-        c0 = strtoul(p, (char **)&p, 16);
+        c0 = strtoul(p, (char **) &p, 16);
         if (*p == '.' && p[1] == '.') {
             p += 2;
-            c1 = strtoul(p, (char **)&p, 16);
+            c1 = strtoul(p, (char **) &p, 16);
         } else {
             c1 = c0;
         }
@@ -667,17 +649,17 @@ void parse_derived_norm_properties(const char *filename)
             }
             *q = '\0';
             if (!strcmp(buf, "Changes_When_NFKC_Casefolded")) {
-                for(c = c0; c <= c1; c++) {
+                for (c = c0; c <= c1; c++) {
                     set_prop(c, PROP_Changes_When_NFKC_Casefolded, 1);
                 }
             }
         }
     }
+
     fclose(f);
 }
 
-void parse_prop_list(const char *filename)
-{
+void parse_prop_list(const char *filename) {
     FILE *f;
     char line[4096], *p, buf[256], *q;
     uint32_t c0, c1, c;
@@ -689,7 +671,7 @@ void parse_prop_list(const char *filename)
         exit(1);
     }
 
-    for(;;) {
+    for (;;) {
         if (!get_line(line, sizeof(line), f))
             break;
         p = line;
@@ -697,10 +679,10 @@ void parse_prop_list(const char *filename)
             p++;
         if (*p == '#' || *p == '@' || *p == '\0')
             continue;
-        c0 = strtoul(p, (char **)&p, 16);
+        c0 = strtoul(p, (char **) &p, 16);
         if (*p == '.' && p[1] == '.') {
             p += 2;
-            c1 = strtoul(p, (char **)&p, 16);
+            c1 = strtoul(p, (char **) &p, 16);
         } else {
             c1 = c0;
         }
@@ -722,7 +704,7 @@ void parse_prop_list(const char *filename)
                 fprintf(stderr, "Property not found: %s\n", buf);
                 exit(1);
             }
-            for(c = c0; c <= c1; c++) {
+            for (c = c0; c <= c1; c++) {
                 set_prop(c, i, 1);
             }
         }
@@ -730,20 +712,18 @@ void parse_prop_list(const char *filename)
     fclose(f);
 }
 
-void parse_scripts(const char *filename)
-{
-    FILE *f;
+void parse_scripts(const char *filename) {
     char line[4096], *p, buf[256], *q;
     uint32_t c0, c1, c;
     int i;
 
-    f = fopen(filename, "rb");
+    FILE *f = fopen(filename, "rb");
     if (!f) {
         perror(filename);
         exit(1);
     }
 
-    for(;;) {
+    for (;;) {
         if (!get_line(line, sizeof(line), f))
             break;
         p = line;
@@ -751,10 +731,10 @@ void parse_scripts(const char *filename)
             p++;
         if (*p == '#' || *p == '@' || *p == '\0')
             continue;
-        c0 = strtoul(p, (char **)&p, 16);
+        c0 = strtoul(p, (char **) &p, 16);
         if (*p == '.' && p[1] == '.') {
             p += 2;
-            c1 = strtoul(p, (char **)&p, 16);
+            c1 = strtoul(p, (char **) &p, 16);
         } else {
             c1 = c0;
         }
@@ -776,29 +756,28 @@ void parse_scripts(const char *filename)
                 fprintf(stderr, "Unknown script: '%s'\n", buf);
                 exit(1);
             }
-            for(c = c0; c <= c1; c++)
+            for (c = c0; c <= c1; c++)
                 unicode_db[c].script = i;
         }
     }
+
     fclose(f);
 }
 
-void parse_script_extensions(const char *filename)
-{
-    FILE *f;
+void parse_script_extensions(const char *filename) {
     char line[4096], *p, buf[256], *q;
     uint32_t c0, c1, c;
     int i;
     uint8_t script_ext[255];
     int script_ext_len;
 
-    f = fopen(filename, "rb");
+    FILE *f = fopen(filename, "rb");
     if (!f) {
         perror(filename);
         exit(1);
     }
 
-    for(;;) {
+    for (;;) {
         if (!get_line(line, sizeof(line), f))
             break;
         p = line;
@@ -806,10 +785,10 @@ void parse_script_extensions(const char *filename)
             p++;
         if (*p == '#' || *p == '@' || *p == '\0')
             continue;
-        c0 = strtoul(p, (char **)&p, 16);
+        c0 = strtoul(p, (char **) &p, 16);
         if (*p == '.' && p[1] == '.') {
             p += 2;
-            c1 = strtoul(p, (char **)&p, 16);
+            c1 = strtoul(p, (char **) &p, 16);
         } else {
             c1 = c0;
         }
@@ -818,7 +797,7 @@ void parse_script_extensions(const char *filename)
         script_ext_len = 0;
         if (*p == ';') {
             p++;
-            for(;;) {
+            for (;;) {
                 p += strspn(p, " \t");
                 q = buf;
                 while (*p != '\0' && *p != ' ' && *p != '#' && *p != '\t') {
@@ -838,11 +817,11 @@ void parse_script_extensions(const char *filename)
                 assert(script_ext_len < sizeof(script_ext));
                 script_ext[script_ext_len++] = i;
             }
-            for(c = c0; c <= c1; c++) {
+            for (c = c0; c <= c1; c++) {
                 CCInfo *ci = &unicode_db[c];
                 ci->script_ext_len = script_ext_len;
                 ci->script_ext = malloc(sizeof(ci->script_ext[0]) * script_ext_len);
-                for(i = 0; i < script_ext_len; i++)
+                for (i = 0; i < script_ext_len; i++)
                     ci->script_ext[i] = script_ext[i];
             }
         }
@@ -850,18 +829,17 @@ void parse_script_extensions(const char *filename)
     fclose(f);
 }
 
-void dump_cc_info(CCInfo *ci, int i)
-{
+void dump_cc_info(CCInfo *ci, int i) {
     int j;
     printf("%05x:", i);
     if (ci->u_len != 0) {
         printf(" U:");
-        for(j = 0; j < ci->u_len; j++)
+        for (j = 0; j < ci->u_len; j++)
             printf(" %05x", ci->u_data[j]);
     }
     if (ci->l_len != 0) {
         printf(" L:");
-        for(j = 0; j < ci->l_len; j++)
+        for (j = 0; j < ci->l_len; j++)
             printf(" %05x", ci->l_data[j]);
     }
     if (ci->f_code != 0) {
@@ -870,11 +848,10 @@ void dump_cc_info(CCInfo *ci, int i)
     printf("\n");
 }
 
-void dump_data(CCInfo *tab)
-{
+void dump_data(CCInfo *tab) {
     int i;
     CCInfo *ci;
-    for(i = 0; i <= CHARCODE_MAX; i++) {
+    for (i = 0; i <= CHARCODE_MAX; i++) {
         ci = &tab[i];
         if (ci->u_len != 0 || ci->l_len != 0 || ci->f_code != 0) {
             dump_cc_info(ci, i);
@@ -882,8 +859,7 @@ void dump_data(CCInfo *tab)
     }
 }
 
-BOOL is_complicated_case(const CCInfo *ci)
-{
+BOOL is_complicated_case(const CCInfo *ci) {
     return (ci->u_len > 1 || ci->l_len > 1 ||
             (ci->u_len > 0 && ci->l_len > 0) ||
             (ci->f_code != 0) != ci->l_len ||
@@ -910,20 +886,20 @@ enum {
 #endif
 
 const char *run_type_str[] = {
-    "U",
-    "L",
-    "UF",
-    "LF",
-    "UL",
-    "LSU",
-    "U2L_399_EXT2",
-    "UF_D20",
-    "UF_D1_EXT",
-    "U_EXT",
-    "LF_EXT",
-    "U_EXT2",
-    "L_EXT2",
-    "U_EXT3",
+        "U",
+        "L",
+        "UF",
+        "LF",
+        "UL",
+        "LSU",
+        "U2L_399_EXT2",
+        "UF_D20",
+        "UF_D1_EXT",
+        "U_EXT",
+        "LF_EXT",
+        "U_EXT2",
+        "L_EXT2",
+        "U_EXT3",
 };
 
 typedef struct {
@@ -938,8 +914,7 @@ typedef struct {
 
 /* code (17), len (7), type (4) */
 
-void find_run_type(TableEntry *te, CCInfo *tab, int code)
-{
+void find_run_type(TableEntry *te, CCInfo *tab, int code) {
     int is_lower, len;
     CCInfo *ci, *ci1, *ci2;
 
@@ -989,7 +964,7 @@ void find_run_type(TableEntry *te, CCInfo *tab, int code)
             while (code + len <= CHARCODE_MAX) {
                 ci1 = &tab[code + len];
                 if (!(ci1->u_len == 2 &&
-                    ci1->u_data[1] == 0x399 &&
+                      ci1->u_data[1] == 0x399 &&
                       ci1->u_data[0] == ci->u_data[0] + len &&
                       ci1->f_code == 0 &&
                       ci1->l_len == 0))
@@ -1050,8 +1025,8 @@ void find_run_type(TableEntry *te, CCInfo *tab, int code)
             te->type = RUN_TYPE_UF_D20;
             te->data = ci->u_data[0];
         } else if (ci->l_len == 0 &&
-            ci->u_len == 1 &&
-            ci->f_code == ci->u_data[0] + 1) {
+                   ci->u_len == 1 &&
+                   ci->f_code == ci->u_data[0] + 1) {
             te->len = 1;
             te->type = RUN_TYPE_UF_D1_EXT;
             te->ext_data[0] = ci->u_data[0];
@@ -1083,7 +1058,7 @@ void find_run_type(TableEntry *te, CCInfo *tab, int code)
     } else {
         /* look for a run of identical conversions */
         len = 0;
-        for(;;) {
+        for (;;) {
             if (code >= CHARCODE_MAX || len >= 126)
                 break;
             ci = &tab[code + len];
@@ -1138,16 +1113,15 @@ int conv_table_len;
 int ext_data[1000];
 int ext_data_len;
 
-void dump_case_conv_table1(void)
-{
+void dump_case_conv_table1(void) {
     int i, j;
     const TableEntry *te;
 
-    for(i = 0; i < conv_table_len; i++) {
+    for (i = 0; i < conv_table_len; i++) {
         te = &conv_table[i];
         printf("%05x %02x %-10s %05x",
                te->code, te->len, run_type_str[te->type], te->data);
-        for(j = 0; j < te->ext_len; j++) {
+        for (j = 0; j < te->ext_len; j++) {
             printf(" %05x", te->ext_data[j]);
         }
         printf("\n");
@@ -1155,22 +1129,20 @@ void dump_case_conv_table1(void)
     printf("table_len=%d ext_len=%d\n", conv_table_len, ext_data_len);
 }
 
-int find_data_index(const TableEntry *conv_table, int len, int data)
-{
+int find_data_index(const TableEntry *conv_tab, int len, int data) {
     int i;
     const TableEntry *te;
-    for(i = 0; i < len; i++) {
-        te = &conv_table[i];
+    for (i = 0; i < len; i++) {
+        te = &conv_tab[i];
         if (te->code == data)
             return i;
     }
     return -1;
 }
 
-int find_ext_data_index(int data)
-{
+int find_ext_data_index(int data) {
     int i;
-    for(i = 0; i < ext_data_len; i++) {
+    for (i = 0; i < ext_data_len; i++) {
         if (ext_data[i] == data)
             return i;
     }
@@ -1179,14 +1151,13 @@ int find_ext_data_index(int data)
     return ext_data_len - 1;
 }
 
-void build_conv_table(CCInfo *tab)
-{
+void build_conv_table(CCInfo *tab) {
     int code, i, j;
     CCInfo *ci;
     TableEntry *te;
 
     te = conv_table;
-    for(code = 0; code <= CHARCODE_MAX; code++) {
+    for (code = 0; code <= CHARCODE_MAX; code++) {
         ci = &tab[code];
         if (ci->u_len == 0 && ci->l_len == 0 && ci->f_code == 0)
             continue;
@@ -1205,49 +1176,49 @@ void build_conv_table(CCInfo *tab)
     conv_table_len = te - conv_table;
 
     /* find the data index */
-    for(i = 0; i < conv_table_len; i++) {
+    for (i = 0; i < conv_table_len; i++) {
         int data_index;
         te = &conv_table[i];
 
-        switch(te->type) {
-        case RUN_TYPE_U:
-        case RUN_TYPE_L:
-        case RUN_TYPE_UF:
-        case RUN_TYPE_LF:
-            data_index = find_data_index(conv_table, conv_table_len, te->data);
-            if (data_index < 0) {
-                switch(te->type) {
-                case RUN_TYPE_U:
-                    te->type = RUN_TYPE_U_EXT;
-                    te->ext_len = 1;
-                    te->ext_data[0] = te->data;
-                    break;
-                case RUN_TYPE_LF:
-                    te->type = RUN_TYPE_LF_EXT;
-                    te->ext_len = 1;
-                    te->ext_data[0] = te->data;
-                    break;
-                default:
-                    printf("%05x: index not found\n", te->code);
-                    exit(1);
+        switch (te->type) {
+            case RUN_TYPE_U:
+            case RUN_TYPE_L:
+            case RUN_TYPE_UF:
+            case RUN_TYPE_LF:
+                data_index = find_data_index(conv_table, conv_table_len, te->data);
+                if (data_index < 0) {
+                    switch (te->type) {
+                        case RUN_TYPE_U:
+                            te->type = RUN_TYPE_U_EXT;
+                            te->ext_len = 1;
+                            te->ext_data[0] = te->data;
+                            break;
+                        case RUN_TYPE_LF:
+                            te->type = RUN_TYPE_LF_EXT;
+                            te->ext_len = 1;
+                            te->ext_data[0] = te->data;
+                            break;
+                        default:
+                            printf("%05x: index not found\n", te->code);
+                            exit(1);
+                    }
+                } else {
+                    te->data_index = data_index;
                 }
-            } else {
-                te->data_index = data_index;
-            }
-            break;
-        case RUN_TYPE_UF_D20:
-            te->data_index = te->data;
-            break;
+                break;
+            case RUN_TYPE_UF_D20:
+                te->data_index = te->data;
+                break;
         }
     }
 
     /* find the data index for ext_data */
-    for(i = 0; i < conv_table_len; i++) {
+    for (i = 0; i < conv_table_len; i++) {
         te = &conv_table[i];
         if (te->type == RUN_TYPE_U_EXT3) {
             int p, v;
             v = 0;
-            for(j = 0; j < 3; j++) {
+            for (j = 0; j < 3; j++) {
                 p = find_ext_data_index(te->ext_data[j]);
                 assert(p < 16);
                 v = (v << 4) | p;
@@ -1256,14 +1227,14 @@ void build_conv_table(CCInfo *tab)
         }
     }
 
-    for(i = 0; i < conv_table_len; i++) {
+    for (i = 0; i < conv_table_len; i++) {
         te = &conv_table[i];
         if (te->type == RUN_TYPE_L_EXT2 ||
             te->type == RUN_TYPE_U_EXT2 ||
             te->type == RUN_TYPE_U2L_399_EXT2) {
             int p, v;
             v = 0;
-            for(j = 0; j < 2; j++) {
+            for (j = 0; j < 2; j++) {
                 p = find_ext_data_index(te->ext_data[j]);
                 assert(p < 64);
                 v = (v << 6) | p;
@@ -1272,7 +1243,7 @@ void build_conv_table(CCInfo *tab)
         }
     }
 
-    for(i = 0; i < conv_table_len; i++) {
+    for (i = 0; i < conv_table_len; i++) {
         te = &conv_table[i];
         if (te->type == RUN_TYPE_UF_D1_EXT ||
             te->type == RUN_TYPE_U_EXT ||
@@ -1285,14 +1256,13 @@ void build_conv_table(CCInfo *tab)
 #endif
 }
 
-void dump_case_conv_table(FILE *f)
-{
+void dump_case_conv_table(FILE *f) {
     int i;
     uint32_t v;
     const TableEntry *te;
 
     fprintf(f, "static const uint32_t case_conv_table1[%u] = {", conv_table_len);
-    for(i = 0; i < conv_table_len; i++) {
+    for (i = 0; i < conv_table_len; i++) {
         if (i % 4 == 0)
             fprintf(f, "\n   ");
         te = &conv_table[i];
@@ -1305,7 +1275,7 @@ void dump_case_conv_table(FILE *f)
     fprintf(f, "\n};\n\n");
 
     fprintf(f, "static const uint8_t case_conv_table2[%u] = {", conv_table_len);
-    for(i = 0; i < conv_table_len; i++) {
+    for (i = 0; i < conv_table_len; i++) {
         if (i % 8 == 0)
             fprintf(f, "\n   ");
         te = &conv_table[i];
@@ -1314,7 +1284,7 @@ void dump_case_conv_table(FILE *f)
     fprintf(f, "\n};\n\n");
 
     fprintf(f, "static const uint16_t case_conv_ext[%u] = {", ext_data_len);
-    for(i = 0; i < ext_data_len; i++) {
+    for (i = 0; i < ext_data_len; i++) {
         if (i % 8 == 0)
             fprintf(f, "\n   ");
         fprintf(f, " 0x%04x,", ext_data[i]);
@@ -1322,31 +1292,28 @@ void dump_case_conv_table(FILE *f)
     fprintf(f, "\n};\n\n");
 }
 
-int tabcmp(const int *tab1, const int *tab2, int n)
-{
+int tabcmp(const int *tab1, const int *tab2, int n) {
     int i;
-    for(i = 0; i < n; i++) {
+    for (i = 0; i < n; i++) {
         if (tab1[i] != tab2[i])
             return -1;
     }
     return 0;
 }
 
-void dump_str(const char *str, const int *buf, int len)
-{
+void dump_str(const char *str, const int *buf, int len) {
     int i;
     printf("%s=", str);
-    for(i = 0; i < len; i++)
+    for (i = 0; i < len; i++)
         printf(" %05x", buf[i]);
     printf("\n");
 }
 
-void compute_internal_props(void)
-{
+void compute_internal_props(void) {
     int i;
     BOOL has_ul;
 
-    for(i = 0; i <= CHARCODE_MAX; i++) {
+    for (i = 0; i <= CHARCODE_MAX; i++) {
         CCInfo *ci = &unicode_db[i];
         has_ul = (ci->u_len != 0 || ci->l_len != 0 || ci->f_code != 0);
         if (has_ul) {
@@ -1382,11 +1349,10 @@ void compute_internal_props(void)
     }
 }
 
-void dump_byte_table(FILE *f, const char *cname, const uint8_t *tab, int len)
-{
+void dump_byte_table(FILE *f, const char *cname, const uint8_t *tab, int len) {
     int i;
     fprintf(f, "static const uint8_t %s[%d] = {", cname, len);
-    for(i = 0; i < len; i++) {
+    for (i = 0; i < len; i++) {
         if (i % 8 == 0)
             fprintf(f, "\n   ");
         fprintf(f, " 0x%02x,", tab[i]);
@@ -1396,8 +1362,7 @@ void dump_byte_table(FILE *f, const char *cname, const uint8_t *tab, int len)
 
 #define PROP_BLOCK_LEN 32
 
-void build_prop_table(FILE *f, int prop_index, BOOL add_index)
-{
+void build_prop_table(FILE *f, int prop_index, BOOL add_index) {
     int i, j, n, v, offset, code;
     DynBuf dbuf_s, *dbuf = &dbuf_s;
     DynBuf dbuf1_s, *dbuf1 = &dbuf1_s;
@@ -1408,7 +1373,7 @@ void build_prop_table(FILE *f, int prop_index, BOOL add_index)
 
     dbuf_init(dbuf1);
 
-    for(i = 0; i <= CHARCODE_MAX;) {
+    for (i = 0; i <= CHARCODE_MAX;) {
         v = get_prop(i, prop_index);
         j = i + 1;
         while (j <= CHARCODE_MAX && get_prop(j, prop_index) == v) {
@@ -1424,7 +1389,7 @@ void build_prop_table(FILE *f, int prop_index, BOOL add_index)
 
     dbuf_init(dbuf);
     dbuf_init(dbuf2);
-    buf = (uint32_t *)dbuf1->buf;
+    buf = (uint32_t *) dbuf1->buf;
     buf_len = dbuf1->size / sizeof(buf[0]);
 
     /* the first value is assumed to be 0 */
@@ -1496,21 +1461,16 @@ void build_prop_table(FILE *f, int prop_index, BOOL add_index)
     dbuf_free(dbuf2);
 }
 
-void build_flags_tables(FILE *f)
-{
+void build_flags_tables(FILE *f) {
     build_prop_table(f, PROP_Cased1, TRUE);
     build_prop_table(f, PROP_Case_Ignorable, TRUE);
     build_prop_table(f, PROP_ID_Start, TRUE);
     build_prop_table(f, PROP_ID_Continue1, TRUE);
 }
 
-void dump_name_table(FILE *f, const char *cname, const char **tab_name, int len,
-                     const char **tab_short_name)
-{
-    int i, w, maxw;
-
-    maxw = 0;
-    for(i = 0; i < len; i++) {
+void dump_name_table(FILE *f, const char *cname, const char **tab_name, int len, const char **tab_short_name) {
+    int i, w, maxw = 0;
+    for (i = 0; i < len; i++) {
         w = strlen(tab_name[i]);
         if (tab_short_name[i][0] != '\0') {
             w += 1 + strlen(tab_short_name[i]);
@@ -1521,7 +1481,7 @@ void dump_name_table(FILE *f, const char *cname, const char **tab_name, int len,
 
     /* generate a sequence of strings terminated by an empty string */
     fprintf(f, "static const char %s[] =\n", cname);
-    for(i = 0; i < len; i++) {
+    for (i = 0; i < len; i++) {
         fprintf(f, "    \"");
         w = fprintf(f, "%s", tab_name[i]);
         if (tab_short_name[i][0] != '\0') {
@@ -1532,14 +1492,13 @@ void dump_name_table(FILE *f, const char *cname, const char **tab_name, int len,
     fprintf(f, ";\n\n");
 }
 
-void build_general_category_table(FILE *f)
-{
+void build_general_category_table(FILE *f) {
     int i, v, j, n, n1;
     DynBuf dbuf_s, *dbuf = &dbuf_s;
     int cw_count, cw_len_count[4], cw_start;
 
     fprintf(f, "typedef enum {\n");
-    for(i = 0; i < GCAT_COUNT; i++)
+    for (i = 0; i < GCAT_COUNT; i++)
         fprintf(f, "    UNICODE_GC_%s,\n", unicode_gc_name[i]);
     fprintf(f, "    UNICODE_GC_COUNT,\n");
     fprintf(f, "} UnicodeGCEnum;\n\n");
@@ -1551,9 +1510,9 @@ void build_general_category_table(FILE *f)
 
     dbuf_init(dbuf);
     cw_count = 0;
-    for(i = 0; i < 4; i++)
+    for (i = 0; i < 4; i++)
         cw_len_count[i] = 0;
-    for(i = 0; i <= CHARCODE_MAX;) {
+    for (i = 0; i <= CHARCODE_MAX;) {
         v = unicode_db[i].general_category;
         j = i + 1;
         while (j <= CHARCODE_MAX && unicode_db[j].general_category == v)
@@ -1611,14 +1570,13 @@ void build_general_category_table(FILE *f)
     dbuf_free(dbuf);
 }
 
-void build_script_table(FILE *f)
-{
+void build_script_table(FILE *f) {
     int i, v, j, n, n1, type;
     DynBuf dbuf_s, *dbuf = &dbuf_s;
     int cw_count, cw_len_count[4], cw_start;
 
     fprintf(f, "typedef enum {\n");
-    for(i = 0; i < SCRIPT_COUNT; i++)
+    for (i = 0; i < SCRIPT_COUNT; i++)
         fprintf(f, "    UNICODE_SCRIPT_%s,\n", unicode_script_name[i]);
     fprintf(f, "    UNICODE_SCRIPT_COUNT,\n");
     fprintf(f, "} UnicodeScriptEnum;\n\n");
@@ -1630,9 +1588,9 @@ void build_script_table(FILE *f)
 
     dbuf_init(dbuf);
     cw_count = 0;
-    for(i = 0; i < 4; i++)
+    for (i = 0; i < 4; i++)
         cw_len_count[i] = 0;
-    for(i = 0; i <= CHARCODE_MAX;) {
+    for (i = 0; i <= CHARCODE_MAX;) {
         v = unicode_db[i].script;
         j = i + 1;
         while (j <= CHARCODE_MAX && unicode_db[j].script == v)
@@ -1681,15 +1639,14 @@ void build_script_table(FILE *f)
     dbuf_free(dbuf);
 }
 
-void build_script_ext_table(FILE *f)
-{
+void build_script_ext_table(FILE *f) {
     int i, j, n, n1, script_ext_len;
     DynBuf dbuf_s, *dbuf = &dbuf_s;
     int cw_count;
 
     dbuf_init(dbuf);
     cw_count = 0;
-    for(i = 0; i <= CHARCODE_MAX;) {
+    for (i = 0; i <= CHARCODE_MAX;) {
         script_ext_len = unicode_db[i].script_ext_len;
         j = i + 1;
         while (j <= CHARCODE_MAX &&
@@ -1716,7 +1673,7 @@ void build_script_ext_table(FILE *f)
             dbuf_putc(dbuf, n1);
         }
         dbuf_putc(dbuf, script_ext_len);
-        for(j = 0; j < script_ext_len; j++)
+        for (j = 0; j < script_ext_len; j++)
             dbuf_putc(dbuf, unicode_db[i].script_ext[j]);
         i += n + 1;
     }
@@ -1734,11 +1691,10 @@ void build_script_ext_table(FILE *f)
 /* the following properties are synthetized so no table is necessary */
 #define PROP_TABLE_COUNT PROP_ASCII
 
-void build_prop_list_table(FILE *f)
-{
+void build_prop_list_table(FILE *f) {
     int i;
 
-    for(i = 0; i < PROP_TABLE_COUNT; i++) {
+    for (i = 0; i < PROP_TABLE_COUNT; i++) {
         if (i == PROP_ID_Start ||
             i == PROP_Case_Ignorable ||
             i == PROP_ID_Continue1) {
@@ -1749,7 +1705,7 @@ void build_prop_list_table(FILE *f)
     }
 
     fprintf(f, "typedef enum {\n");
-    for(i = 0; i < PROP_COUNT; i++)
+    for (i = 0; i < PROP_COUNT; i++)
         fprintf(f, "    UNICODE_PROP_%s,\n", unicode_prop_name[i]);
     fprintf(f, "    UNICODE_PROP_COUNT,\n");
     fprintf(f, "} UnicodePropertyEnum;\n\n");
@@ -1760,26 +1716,24 @@ void build_prop_list_table(FILE *f)
                     unicode_prop_short_name + i);
 
     fprintf(f, "static const uint8_t * const unicode_prop_table[] = {\n");
-    for(i = 0; i < PROP_TABLE_COUNT; i++) {
+    for (i = 0; i < PROP_TABLE_COUNT; i++) {
         fprintf(f, "    unicode_prop_%s_table,\n", unicode_prop_name[i]);
     }
     fprintf(f, "};\n\n");
 
     fprintf(f, "static const uint16_t unicode_prop_len_table[] = {\n");
-    for(i = 0; i < PROP_TABLE_COUNT; i++) {
+    for (i = 0; i < PROP_TABLE_COUNT; i++) {
         fprintf(f, "    countof(unicode_prop_%s_table),\n", unicode_prop_name[i]);
     }
     fprintf(f, "};\n\n");
 }
 
 #ifdef USE_TEST
-int check_conv(uint32_t *res, uint32_t c, int conv_type)
-{
+int check_conv(uint32_t *res, uint32_t c, int conv_type) {
     return lre_case_conv(res, c, conv_type);
 }
 
-void check_case_conv(void)
-{
+void check_case_conv(void) {
     CCInfo *tab = unicode_db;
     uint32_t res[3];
     int l, error;
@@ -1824,8 +1778,7 @@ void check_case_conv(void)
 }
 
 #ifdef PROFILE
-static int64_t get_time_ns(void)
-{
+static int64_t get_time_ns(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (int64_t)ts.tv_sec * 1000000000 + ts.tv_nsec;
@@ -1833,8 +1786,7 @@ static int64_t get_time_ns(void)
 #endif
 
 
-void check_flags(void)
-{
+void check_flags(void) {
     int c;
     BOOL flag_ref, flag;
     for(c = 0; c <= CHARCODE_MAX; c++) {
@@ -1892,8 +1844,7 @@ void check_flags(void)
 
 #define CC_BLOCK_LEN 32
 
-void build_cc_table(FILE *f)
-{
+void build_cc_table(FILE *f) {
     int i, cc, n, cc_table_len, type, n1;
     DynBuf dbuf_s, *dbuf = &dbuf_s;
     DynBuf dbuf1_s, *dbuf1 = &dbuf1_s;
@@ -1903,10 +1854,10 @@ void build_cc_table(FILE *f)
     dbuf_init(dbuf);
     dbuf_init(dbuf1);
     cc_table_len = 0;
-    for(i = 0; i < countof(cw_len_tab); i++)
+    for (i = 0; i < countof(cw_len_tab); i++)
         cw_len_tab[i] = 0;
     block_end_pos = CC_BLOCK_LEN;
-    for(i = 0; i <= CHARCODE_MAX;) {
+    for (i = 0; i <= CHARCODE_MAX;) {
         cc = unicode_db[i].combining_class;
         assert(cc <= 255);
         /* check increasing values */
@@ -2029,48 +1980,48 @@ typedef enum {
 #endif
 
 const char *decomp_type_str[] = {
-    "C1",
-    "L1",
-    "L2",
-    "L3",
-    "L4",
-    "L5",
-    "L6",
-    "L7",
-    "LL1",
-    "LL2",
-    "S1",
-    "S2",
-    "S3",
-    "S4",
-    "S5",
-    "I1",
-    "I2_0",
-    "I2_1",
-    "I3_1",
-    "I3_2",
-    "I4_1",
-    "I4_2",
-    "B1",
-    "B2",
-    "B3",
-    "B4",
-    "B5",
-    "B6",
-    "B7",
-    "B8",
-    "B18",
-    "LS2",
-    "PAT3",
-    "S2_UL",
-    "LS2_UL",
+        "C1",
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5",
+        "L6",
+        "L7",
+        "LL1",
+        "LL2",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "I1",
+        "I2_0",
+        "I2_1",
+        "I3_1",
+        "I3_2",
+        "I4_1",
+        "I4_2",
+        "B1",
+        "B2",
+        "B3",
+        "B4",
+        "B5",
+        "B6",
+        "B7",
+        "B8",
+        "B18",
+        "LS2",
+        "PAT3",
+        "S2_UL",
+        "LS2_UL",
 };
 
 const int decomp_incr_tab[4][4] = {
-    { DECOMP_TYPE_I1, 0, -1 },
-    { DECOMP_TYPE_I2_0, 0, 1, -1 },
-    { DECOMP_TYPE_I3_1, 1, 2, -1 },
-    { DECOMP_TYPE_I4_1, 1, 2, -1 },
+        {DECOMP_TYPE_I1,   0, -1},
+        {DECOMP_TYPE_I2_0, 0, 1, -1},
+        {DECOMP_TYPE_I3_1, 1, 2, -1},
+        {DECOMP_TYPE_I4_1, 1, 2, -1},
 };
 
 /*
@@ -2094,8 +2045,7 @@ typedef struct {
     int cost; /* size in bytes from this entry to the end */
 } DecompEntry;
 
-int get_decomp_run_size(const DecompEntry *de)
-{
+int get_decomp_run_size(const DecompEntry *de) {
     int s;
     s = 6;
     if (de->type <= DECOMP_TYPE_C1) {
@@ -2125,18 +2075,17 @@ int get_decomp_run_size(const DecompEntry *de)
     return s;
 }
 
-static const uint16_t unicode_short_table[2] = { 0x2044, 0x2215 };
+static const uint16_t unicode_short_table[2] = {0x2044, 0x2215};
 
 /* return -1 if not found */
-int get_short_code(int c)
-{
+int get_short_code(int c) {
     int i;
     if (c < 0x80) {
         return c;
     } else if (c >= 0x300 && c < 0x350) {
         return c - 0x300 + 0x80;
     } else {
-        for(i = 0; i < countof(unicode_short_table); i++) {
+        for (i = 0; i < countof(unicode_short_table); i++) {
             if (c == unicode_short_table[i])
                 return i + 0x80 + 0x50;
         }
@@ -2144,33 +2093,29 @@ int get_short_code(int c)
     }
 }
 
-static BOOL is_short(int code)
-{
+static BOOL is_short(int code) {
     return get_short_code(code) >= 0;
 }
 
-static BOOL is_short_tab(const int *tab, int len)
-{
+static BOOL is_short_tab(const int *tab, int len) {
     int i;
-    for(i = 0; i < len; i++) {
+    for (i = 0; i < len; i++) {
         if (!is_short(tab[i]))
             return FALSE;
     }
     return TRUE;
 }
 
-static BOOL is_16bit(const int *tab, int len)
-{
+static BOOL is_16bit(const int *tab, int len) {
     int i;
-    for(i = 0; i < len; i++) {
+    for (i = 0; i < len; i++) {
         if (tab[i] > 0xffff)
             return FALSE;
     }
     return TRUE;
 }
 
-static uint32_t to_lower_simple(uint32_t c)
-{
+static uint32_t to_lower_simple(uint32_t c) {
     /* Latin1 and Cyrillic */
     if (c < 0x100 || (c >= 0x410 && c <= 0x42f))
         c += 0x20;
@@ -2180,8 +2125,7 @@ static uint32_t to_lower_simple(uint32_t c)
 }
 
 /* select best encoding with dynamic programming */
-void find_decomp_run(DecompEntry *tab_de, int i)
-{
+void find_decomp_run(DecompEntry *tab_de, int i) {
     DecompEntry de_s, *de = &de_s;
     CCInfo *ci, *ci1, *ci2;
     int l, j, n, len_max;
@@ -2206,7 +2150,7 @@ void find_decomp_run(DecompEntry *tab_de, int i)
         assert(l <= 2);
 
         n = 1;
-        for(;;) {
+        for (;;) {
             de->code = i;
             de->len = n;
             de->type = DECOMP_TYPE_LL1 + l - 1;
@@ -2230,7 +2174,7 @@ void find_decomp_run(DecompEntry *tab_de, int i)
 
     if (l <= 7) {
         n = 1;
-        for(;;) {
+        for (;;) {
             de->code = i;
             de->len = n;
             if (l == 1 && n == 1) {
@@ -2262,9 +2206,9 @@ void find_decomp_run(DecompEntry *tab_de, int i)
         int c_min, c_max, c;
         c_min = c_max = -1;
         n = 1;
-        for(;;) {
+        for (;;) {
             ci1 = &unicode_db[i + n - 1];
-            for(j = 0; j < l; j++) {
+            for (j = 0; j < l; j++) {
                 c = ci1->decomp_data[j];
                 if (c == 0x20) {
                     /* we accept space for Arabic */
@@ -2302,7 +2246,7 @@ void find_decomp_run(DecompEntry *tab_de, int i)
     /* find an ascii run */
     if (l <= 5 && is_short_tab(ci->decomp_data, l)) {
         n = 1;
-        for(;;) {
+        for (;;) {
             de->code = i;
             de->len = n;
             de->type = DECOMP_TYPE_S1 + l - 1;
@@ -2329,9 +2273,9 @@ void find_decomp_run(DecompEntry *tab_de, int i)
     if (l <= 4) {
         int idx1, idx;
 
-        for(idx1 = 1; (idx = decomp_incr_tab[l - 1][idx1]) >= 0; idx1++) {
+        for (idx1 = 1; (idx = decomp_incr_tab[l - 1][idx1]) >= 0; idx1++) {
             n = 1;
-            for(;;) {
+            for (;;) {
                 de->code = i;
                 de->len = n;
                 de->type = decomp_incr_tab[l - 1][0] + idx1 - 1;
@@ -2347,7 +2291,7 @@ void find_decomp_run(DecompEntry *tab_de, int i)
                 if (!(ci1->decomp_len == l &&
                       ci1->is_compat == ci->is_compat))
                     goto next1;
-                for(j = 0; j < l; j++) {
+                for (j = 0; j < l; j++) {
                     if (j == idx) {
                         if (ci1->decomp_data[j] != ci->decomp_data[j] + n)
                             goto next1;
@@ -2358,13 +2302,13 @@ void find_decomp_run(DecompEntry *tab_de, int i)
                 }
                 n++;
             }
-        next1: ;
+            next1:;
         }
     }
 
     if (l == 3) {
         n = 1;
-        for(;;) {
+        for (;;) {
             de->code = i;
             de->len = n;
             de->type = DECOMP_TYPE_PAT3;
@@ -2388,7 +2332,7 @@ void find_decomp_run(DecompEntry *tab_de, int i)
 
     if (l == 2 && is_short(ci->decomp_data[1])) {
         n = 1;
-        for(;;) {
+        for (;;) {
             de->code = i;
             de->len = n;
             de->type = DECOMP_TYPE_LS2;
@@ -2415,7 +2359,7 @@ void find_decomp_run(DecompEntry *tab_de, int i)
 
         n = 0;
         is_16bit = FALSE;
-        for(;;) {
+        for (;;) {
             if (!((i + n + 1) <= CHARCODE_MAX && n + 2 <= len_max))
                 break;
             ci1 = &unicode_db[i + n];
@@ -2428,7 +2372,7 @@ void find_decomp_run(DecompEntry *tab_de, int i)
             ci2 = &unicode_db[i + n + 1];
             if (!(ci2->decomp_len == l &&
                   ci2->is_compat == ci->is_compat &&
-                  ci2->decomp_data[0] == to_lower_simple(ci1->decomp_data[0])  &&
+                  ci2->decomp_data[0] == to_lower_simple(ci1->decomp_data[0]) &&
                   ci2->decomp_data[1] == ci1->decomp_data[1]))
                 break;
             n += 2;
@@ -2444,8 +2388,7 @@ void find_decomp_run(DecompEntry *tab_de, int i)
     }
 }
 
-void put16(uint8_t *data_buf, int *pidx, uint16_t c)
-{
+void put16(uint8_t *data_buf, int *pidx, uint16_t c) {
     int idx;
     idx = *pidx;
     data_buf[idx++] = c;
@@ -2453,8 +2396,7 @@ void put16(uint8_t *data_buf, int *pidx, uint16_t c)
     *pidx = idx;
 }
 
-void add_decomp_data(uint8_t *data_buf, int *pidx, DecompEntry *de)
-{
+void add_decomp_data(uint8_t *data_buf, int *pidx, DecompEntry *de) {
     int i, j, idx, c;
     CCInfo *ci;
 
@@ -2465,14 +2407,14 @@ void add_decomp_data(uint8_t *data_buf, int *pidx, DecompEntry *de)
         assert(ci->decomp_len == 1);
         de->data_index = ci->decomp_data[0];
     } else if (de->type <= DECOMP_TYPE_L7) {
-        for(i = 0; i < de->len; i++) {
+        for (i = 0; i < de->len; i++) {
             ci = &unicode_db[de->code + i];
-            for(j = 0; j < de->c_len; j++) {
+            for (j = 0; j < de->c_len; j++) {
                 if (ci->decomp_len == 0)
                     c = 0;
                 else
                     c = ci->decomp_data[j];
-                put16(data_buf, &idx,  c);
+                put16(data_buf, &idx, c);
             }
         }
     } else if (de->type <= DECOMP_TYPE_LL2) {
@@ -2481,9 +2423,9 @@ void add_decomp_data(uint8_t *data_buf, int *pidx, DecompEntry *de)
         p = de->len * de->c_len * 2;
         memset(data_buf + idx, 0, n);
         k = 0;
-        for(i = 0; i < de->len; i++) {
+        for (i = 0; i < de->len; i++) {
             ci = &unicode_db[de->code + i];
-            for(j = 0; j < de->c_len; j++) {
+            for (j = 0; j < de->c_len; j++) {
                 if (ci->decomp_len == 0)
                     c = 0;
                 else
@@ -2496,9 +2438,9 @@ void add_decomp_data(uint8_t *data_buf, int *pidx, DecompEntry *de)
         }
         idx += n;
     } else if (de->type <= DECOMP_TYPE_S5) {
-        for(i = 0; i < de->len; i++) {
+        for (i = 0; i < de->len; i++) {
             ci = &unicode_db[de->code + i];
-            for(j = 0; j < de->c_len; j++) {
+            for (j = 0; j < de->c_len; j++) {
                 if (ci->decomp_len == 0)
                     c = 0;
                 else
@@ -2511,35 +2453,35 @@ void add_decomp_data(uint8_t *data_buf, int *pidx, DecompEntry *de)
     } else if (de->type <= DECOMP_TYPE_I4_2) {
         ci = &unicode_db[de->code];
         assert(ci->decomp_len == de->c_len);
-        for(j = 0; j < de->c_len; j++)
+        for (j = 0; j < de->c_len; j++)
             put16(data_buf, &idx, ci->decomp_data[j]);
     } else if (de->type <= DECOMP_TYPE_B18) {
         c = de->c_min;
         data_buf[idx++] = c;
         data_buf[idx++] = c >> 8;
-        for(i = 0; i < de->len; i++) {
+        for (i = 0; i < de->len; i++) {
             ci = &unicode_db[de->code + i];
-            for(j = 0; j < de->c_len; j++) {
+            for (j = 0; j < de->c_len; j++) {
                 assert(ci->decomp_len == de->c_len);
                 c = ci->decomp_data[j];
                 if (c == 0x20) {
                     c = 0xff;
                 } else {
                     c -= de->c_min;
-                    assert((uint32_t)c <= 254);
+                    assert((uint32_t) c <= 254);
                 }
                 data_buf[idx++] = c;
             }
         }
     } else if (de->type <= DECOMP_TYPE_LS2) {
         assert(de->c_len == 2);
-        for(i = 0; i < de->len; i++) {
+        for (i = 0; i < de->len; i++) {
             ci = &unicode_db[de->code + i];
             if (ci->decomp_len == 0)
                 c = 0;
             else
                 c = ci->decomp_data[0];
-            put16(data_buf, &idx,  c);
+            put16(data_buf, &idx, c);
 
             if (ci->decomp_len == 0)
                 c = 0;
@@ -2552,15 +2494,15 @@ void add_decomp_data(uint8_t *data_buf, int *pidx, DecompEntry *de)
     } else if (de->type <= DECOMP_TYPE_PAT3) {
         ci = &unicode_db[de->code];
         assert(ci->decomp_len == 3);
-        put16(data_buf, &idx,  ci->decomp_data[0]);
-        put16(data_buf, &idx,  ci->decomp_data[2]);
-        for(i = 0; i < de->len; i++) {
+        put16(data_buf, &idx, ci->decomp_data[0]);
+        put16(data_buf, &idx, ci->decomp_data[2]);
+        for (i = 0; i < de->len; i++) {
             ci = &unicode_db[de->code + i];
             assert(ci->decomp_len == 3);
-            put16(data_buf, &idx,  ci->decomp_data[1]);
+            put16(data_buf, &idx, ci->decomp_data[1]);
         }
     } else if (de->type <= DECOMP_TYPE_S2_UL) {
-        for(i = 0; i < de->len; i += 2) {
+        for (i = 0; i < de->len; i += 2) {
             ci = &unicode_db[de->code + i];
             c = ci->decomp_data[0];
             c = get_short_code(c);
@@ -2572,10 +2514,10 @@ void add_decomp_data(uint8_t *data_buf, int *pidx, DecompEntry *de)
             data_buf[idx++] = c;
         }
     } else if (de->type <= DECOMP_TYPE_LS2_UL) {
-        for(i = 0; i < de->len; i += 2) {
+        for (i = 0; i < de->len; i += 2) {
             ci = &unicode_db[de->code + i];
             c = ci->decomp_data[0];
-            put16(data_buf, &idx,  c);
+            put16(data_buf, &idx, c);
             c = ci->decomp_data[1];
             c = get_short_code(c);
             assert(c >= 0);
@@ -2588,8 +2530,7 @@ void add_decomp_data(uint8_t *data_buf, int *pidx, DecompEntry *de)
 }
 
 #if 0
-void dump_large_char(void)
-{
+void dump_large_char(void) {
     int i, j;
     for(i = 0; i <= CHARCODE_MAX; i++) {
         CCInfo *ci = &unicode_db[i];
@@ -2603,17 +2544,16 @@ void dump_large_char(void)
 
 void build_compose_table(FILE *f, const DecompEntry *tab_de);
 
-void build_decompose_table(FILE *f)
-{
+void build_decompose_table(FILE *f) {
     int i, array_len, code_max, data_len, count;
     DecompEntry *tab_de, de_s, *de = &de_s;
     uint8_t *data_buf;
 
     code_max = CHARCODE_MAX;
 
-    tab_de = mallocz((code_max + 2) * sizeof(*tab_de));
+    tab_de = zalloc((code_max + 2) * sizeof(*tab_de));
 
-    for(i = code_max; i >= 0; i--) {
+    for (i = code_max; i >= 0; i--) {
         find_decomp_run(tab_de, i);
     }
 
@@ -2621,7 +2561,7 @@ void build_decompose_table(FILE *f)
     data_buf = malloc(100000);
     data_len = 0;
     array_len = 0;
-    for(i = 0; i <= code_max; i++) {
+    for (i = 0; i <= code_max; i++) {
         de = &tab_de[i];
         if (de->len != 0) {
             add_decomp_data(data_buf, &data_len, de);
@@ -2657,7 +2597,7 @@ void build_decompose_table(FILE *f)
     fprintf(f, "static const uint32_t unicode_decomp_table1[%u] = {",
             array_len);
     count = 0;
-    for(i = 0; i <= code_max; i++) {
+    for (i = 0; i <= code_max; i++) {
         de = &tab_de[i];
         if (de->len != 0) {
             uint32_t v;
@@ -2676,7 +2616,7 @@ void build_decompose_table(FILE *f)
     fprintf(f, "static const uint16_t unicode_decomp_table2[%u] = {",
             array_len);
     count = 0;
-    for(i = 0; i <= code_max; i++) {
+    for (i = 0; i <= code_max; i++) {
         de = &tab_de[i];
         if (de->len != 0) {
             if (count++ % 8 == 0)
@@ -2689,7 +2629,7 @@ void build_decompose_table(FILE *f)
 
     fprintf(f, "static const uint8_t unicode_decomp_data[%u] = {",
             data_len);
-    for(i = 0; i < data_len; i++) {
+    for (i = 0; i < data_len; i++) {
         if (i % 8 == 0)
             fprintf(f, "\n   ");
         fprintf(f, " 0x%02x,", data_buf[i]);
@@ -2710,13 +2650,12 @@ typedef struct {
 
 #define COMPOSE_LEN_MAX 10000
 
-static int ce_cmp(const void *p1, const void *p2)
-{
+static int ce_cmp(const void *p1, const void *p2) {
     const ComposeEntry *ce1 = p1;
     const ComposeEntry *ce2 = p2;
     int i;
 
-    for(i = 0; i < 2; i++) {
+    for (i = 0; i < 2; i++) {
         if (ce1->c[i] < ce2->c[i])
             return -1;
         else if (ce1->c[i] > ce2->c[i])
@@ -2726,13 +2665,12 @@ static int ce_cmp(const void *p1, const void *p2)
 }
 
 
-static int get_decomp_pos(const DecompEntry *tab_de, int c)
-{
+static int get_decomp_pos(const DecompEntry *tab_de, int c) {
     int i, v, k;
     const DecompEntry *de;
 
     k = 0;
-    for(i = 0; i <= CHARCODE_MAX; i++) {
+    for (i = 0; i <= CHARCODE_MAX; i++) {
         de = &tab_de[i];
         if (de->len != 0) {
             if (c >= de->code && c < de->code + de->len) {
@@ -2749,14 +2687,13 @@ static int get_decomp_pos(const DecompEntry *tab_de, int c)
     return -1;
 }
 
-void build_compose_table(FILE *f, const DecompEntry *tab_de)
-{
+void build_compose_table(FILE *f, const DecompEntry *tab_de) {
     int i, v, tab_ce_len;
     ComposeEntry *ce, *tab_ce;
 
     tab_ce = malloc(sizeof(*tab_ce) * COMPOSE_LEN_MAX);
     tab_ce_len = 0;
-    for(i = 0; i <= CHARCODE_MAX; i++) {
+    for (i = 0; i <= CHARCODE_MAX; i++) {
         CCInfo *ci = &unicode_db[i];
         if (ci->decomp_len == 2 && !ci->is_compat &&
             !ci->is_excluded) {
@@ -2781,7 +2718,7 @@ void build_compose_table(FILE *f, const DecompEntry *tab_de)
 
     fprintf(f, "static const uint16_t unicode_comp_table[%u] = {",
             tab_ce_len);
-    for(i = 0; i < tab_ce_len; i++) {
+    for (i = 0; i < tab_ce_len; i++) {
         if (i % 8 == 0)
             fprintf(f, "\n   ");
         v = get_decomp_pos(tab_de, tab_ce[i].p);
@@ -2798,8 +2735,7 @@ void build_compose_table(FILE *f, const DecompEntry *tab_de)
 }
 
 #ifdef USE_TEST
-void check_decompose_table(void)
-{
+void check_decompose_table(void) {
     int c;
     CCInfo *ci;
     int res[UNICODE_DECOMP_LEN_MAX], *ref;
@@ -2850,13 +2786,10 @@ void check_compose_table(void)
 #endif
 
 
-
 #ifdef USE_TEST
 
 void check_str(const char *msg, int num, const int *in_buf, int in_len,
-               const int *buf1, int len1,
-               const int *buf2, int len2)
-{
+               const int *buf1, int len1, const int *buf2, int len2) {
     if (len1 != len2 || tabcmp(buf1, buf2, len1) != 0) {
         printf("%d: ERROR %s:\n", num, msg);
         dump_str(" in", in_buf, in_len);
@@ -2866,8 +2799,7 @@ void check_str(const char *msg, int num, const int *in_buf, int in_len,
     }
 }
 
-void check_cc_table(void)
-{
+void check_cc_table(void) {
     int cc, cc_ref, c;
 
     for(c = 0; c <= CHARCODE_MAX; c++) {
@@ -2898,8 +2830,7 @@ void check_cc_table(void)
 #endif
 }
 
-void normalization_test(const char *filename)
-{
+void normalization_test(const char *filename) {
     FILE *f;
     char line[4096], *p;
     int *in_str, *nfc_str, *nfd_str, *nfkc_str, *nfkd_str;
@@ -2955,8 +2886,7 @@ void normalization_test(const char *filename)
 }
 #endif
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     const char *unicode_db_path, *outfilename;
     char filename[1024];
 
@@ -2972,7 +2902,7 @@ int main(int argc, char **argv)
     if (argc >= 3)
         outfilename = argv[2];
 
-    unicode_db = mallocz(sizeof(unicode_db[0]) * (CHARCODE_MAX + 1));
+    unicode_db = zalloc(sizeof(unicode_db[0]) * (CHARCODE_MAX + 1));
 
     snprintf(filename, sizeof(filename), "%s/UnicodeData.txt", unicode_db_path);
 
@@ -3026,8 +2956,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "Tests are not compiled\n");
         exit(1);
 #endif
-    } else
-    {
+    } else {
         FILE *fo = fopen(outfilename, "wb");
 
         if (!fo) {
@@ -3053,5 +2982,6 @@ int main(int argc, char **argv)
         fprintf(fo, "#endif /* CONFIG_ALL_UNICODE */\n");
         fclose(fo);
     }
+
     return 0;
 }
