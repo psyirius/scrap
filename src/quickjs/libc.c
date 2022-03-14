@@ -635,7 +635,7 @@ JSModuleDef *js_module_loader(JSContext *ctx, const char *module_name, void *opa
         m = JS_VALUE_GET_PTR(func_val);
         JS_FreeValue(ctx, func_val);
     }
-    
+
     return m;
 }
 
@@ -645,6 +645,7 @@ JSValue js_std_exit(JSContext *ctx, JSValueConst this_val, int argc, JSValueCons
     if (JS_ToInt32(ctx, &status, argv[0]))
         status = -1;
     exit(status);
+
     // UNREACHABLE
     return JS_UNDEFINED;
 }
@@ -665,7 +666,8 @@ JSValue js_std_getenv(JSContext *ctx, JSValueConst this_val, int argc, JSValueCo
 
 #if defined(_WIN32)
 
-static void setenv(const char *name, const char *value, int overwrite) {
+static
+void setenv(const char *name, const char *value, int overwrite) {
     char *str;
     size_t name_len, value_len;
     name_len = strlen(name);
@@ -679,7 +681,8 @@ static void setenv(const char *name, const char *value, int overwrite) {
     free(str);
 }
 
-static void unsetenv(const char *name) {
+static
+void unsetenv(const char *name) {
     setenv(name, "", TRUE);
 }
 #endif /* _WIN32 */
@@ -757,17 +760,17 @@ JSValue js_std_gc(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 
 static
 int interrupt_handler(JSRuntime *rt, void *opaque) {
-    return (os_pending_signals >> SIGINT) & 1;
+    return (int) ((os_pending_signals >> SIGINT) & 1);
 }
 
 static
-int get_bool_option(JSContext *ctx, BOOL *pbool, JSValueConst obj, const char *option) {
+int get_bool_option(JSContext *ctx, BOOL *pBool, JSValueConst obj, const char *option) {
     JSValue val;
     val = JS_GetPropertyStr(ctx, obj, option);
     if (JS_IsException(val))
         return -1;
     if (!JS_IsUndefined(val)) {
-        *pbool = JS_ToBool(ctx, val);
+        *pBool = JS_ToBool(ctx, val);
     }
     JS_FreeValue(ctx, val);
     return 0;
@@ -786,8 +789,7 @@ JSValue js_evalScript(JSContext *ctx, JSValueConst this_val, int argc, JSValueCo
 
     if (argc >= 2) {
         options_obj = argv[1];
-        if (get_bool_option(ctx, &backtrace_barrier, options_obj,
-                            "backtrace_barrier"))
+        if (get_bool_option(ctx, &backtrace_barrier, options_obj, "backtrace_barrier"))
             return JS_EXCEPTION;
     }
 
@@ -807,7 +809,7 @@ JSValue js_evalScript(JSContext *ctx, JSValueConst this_val, int argc, JSValueCo
         /* remove the interrupt handler */
         JS_SetInterruptHandler(JS_GetRuntime(ctx), NULL, NULL);
         os_pending_signals &= ~((uint64_t) 1 << SIGINT);
-        /* convert the uncatchable "interrupted" error into a normal error
+        /* convert the un-catchable "interrupted" error into a normal error
            so that it can be caught by the REPL */
         if (JS_IsException(ret))
             JS_ResetUncatchableError(ctx);

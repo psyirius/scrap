@@ -44,15 +44,21 @@ JSContext* JS_NewCustomContext(JSRuntime *rt) {
     return ctx;
 }
 
+static
+int js_import_globals(JSContext *ctx) {
+#define IMPORT_GLOBAL_TO_GLOBAL_JS(name) \
+    "globalThis."#name" = globalThis;"
+
 #define IMPORT_MOD_TO_GLOBAL_JS(name) \
     "import * as "#name" from '"#name"';" \
     "globalThis."#name" = "#name";"
 
-static
-int js_import_globals(JSContext *ctx) {
     const char *js_src = (
+        IMPORT_GLOBAL_TO_GLOBAL_JS(global)
+
         IMPORT_MOD_TO_GLOBAL_JS(std)
         IMPORT_MOD_TO_GLOBAL_JS(os)
+
         IMPORT_MOD_TO_GLOBAL_JS(example)
     );
 
