@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 project(QuickJS)
 
-set(CMAKE_C_STANDARD        17)
-set(CMAKE_CXX_STANDARD      17)
+set(CMAKE_C_STANDARD        11)
+set(CMAKE_CXX_STANDARD      11)
 set(CMAKE_VERBOSE_MAKEFILE  on)
 
 file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/VERSION" QJS_VERSION)
@@ -52,7 +52,22 @@ add_library(${QJS_CORE_TARGET} STATIC ${QJS_CORE_HEADERS} ${QJS_CORE_SOURCES})
 target_include_directories(${QJS_CORE_TARGET} PUBLIC ${QJS_INCLUDE_DIR})
 
 if (!MSVC)
-    target_compile_options(${QJS_CORE_TARGET} PRIVATE
+    set(qjs_cflags -Wall)
+    if(CMAKE_C_COMPILER_ID MATCHES "AppleClang|Clang")
+        list(APPEND qjs_cflags
+            -Wextra
+            -Wno-sign-compare
+            -Wno-missing-field-initializers
+            -Wno-unused-parameter
+            -Wno-unused-variable
+            -funsigned-char
+        )
+    else()
+#        list(APPEND qjs_cflags
+#                -Wno-array-bounds
+#                -Wno-unused-variable
+#                -Wno-unused-but-set-variable)
+        list(APPEND qjs_cflags
             -Os -s
             -MMD -MF
             -Wno-sign-compare
@@ -60,8 +75,11 @@ if (!MSVC)
             -Wunused -Wno-unused-parameter
             -Wundef -Wuninitialized -Wwrite-strings
             -Wchar-subscripts -funsigned-char
-            )
+        )
+    endif()
+    target_compile_options(${QJS_CORE_TARGET} PRIVATE qjs_cflags)
 endif()
+
 
 target_compile_definitions(${QJS_CORE_TARGET} PUBLIC
     CONFIG_VERSION="${QJS_VERSION}"
