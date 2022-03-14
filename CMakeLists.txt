@@ -47,6 +47,9 @@ file(GLOB_RECURSE QJS_CORE_SOURCES
 
 set(QJS_CORE_TARGET qjs-core)
 
+print_list(LABEL "Qjs Core Headers" LIST ${QJS_CORE_HEADERS})
+print_list(LABEL "Qjs Core Sources" LIST ${QJS_CORE_SOURCES})
+
 add_library(${QJS_CORE_TARGET} STATIC ${QJS_CORE_HEADERS} ${QJS_CORE_SOURCES})
 
 target_include_directories(${QJS_CORE_TARGET} PUBLIC ${QJS_INCLUDE_DIR})
@@ -122,7 +125,7 @@ set(QJSC_GENERATED_SOURCES
     ${QJSC_GENERATED_DIR}/test.c
 )
 
-print_list(LABEL "QJsc Generated Sources:" LIST ${QJSC_GENERATED_SOURCES})
+print_list(LABEL "QJsc Generated Sources" LIST ${QJSC_GENERATED_SOURCES})
 
 # QuickJS interpreter.
 set(QJS_INTERPRETER_TARGET qjs)
