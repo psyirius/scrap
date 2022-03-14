@@ -19,6 +19,7 @@ DEF_STRUCT(CStringPrototype) {
     DEF_METHOD(length, size_t);
     DEF_METHOD(cmp, int, const char* other);
     DEF_METHOD(equals, bool, const char* other);
+    DEF_METHOD(replace_char, size_t, char find, char replace);
 };
 
 extern CStringPrototype CString;

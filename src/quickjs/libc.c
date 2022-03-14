@@ -61,6 +61,7 @@ typedef sig_t sighandler_t;
 
 #include "quickjs/utils/cutils.h"
 #include "quickjs/utils/list.h"
+#include "quickjs/utils/cstring.h"
 #include "quickjs/libc.h"
 
 #include "quickjs/utils/common.h"
@@ -436,91 +437,124 @@ static JSValue js_std_loadFile(JSContext *ctx, JSValueConst this_val,
     return ret;
 }
 
-typedef JSModuleDef *(JSInitModuleFunc)(JSContext *ctx,
-                                        const char *module_name);
+typedef JSModuleDef *(JSInitCModuleFunction_t)(JSContext *ctx, const char *module_name);
 
+typedef void* func_t;
+
+#if defined(_WIN32)
+typedef HMODULE dylib_handle_t;
+#else
+typedef void* dylib_handle_t;
+#endif
+
+static
+dylib_handle_t dll_load(const char* filename) {
+#if defined(_WIN32)
+    return LoadLibraryA(filename);
+#else
+    return dlopen(filename, RTLD_NOW | RTLD_LOCAL);
+#endif
+}
+
+static
+func_t dll_symbol(dylib_handle_t handle, const char* symbol) {
+#if defined(_WIN32)
+    return GetProcAddress(handle, symbol);
+#else
+    return dlsym(handle, symbol);
+#endif
+}
+
+static
+void dll_unload(dylib_handle_t handle) {
+#if defined(_WIN32)
+    FreeLibrary(handle);
+#else
+    dlclose(handle);
+#endif
+}
+
+static
+char* dll_error(char* msg, size_t* size) {
+#if defined(_WIN32)
+    size_t mz = FormatMessageA(
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, GetLastError(),
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, *size, NULL
+    );
+
+    assert(mz == *size);
+    *size = mz;
+
+    return msg;
+#else
+    return dlerror();
+#endif
+}
 
 static
 JSModuleDef *js_module_loader_so(JSContext *ctx, const char *module_name) {
-#if defined(_WIN32)
-    HINSTANCE hd;
-    JSModuleDef *m;
-    JSInitModuleFunc *init;
+    char *filename = js_malloc(ctx, CString.length(module_name) + 1 /* for null terminator*/);
 
-    hd = LoadLibrary(module_name);
-    if(!hd) {
-        JS_ThrowReferenceError(ctx, "could not load module filename '%s' as shared library", module_name);
+    if (filename == nullptr)
+        return nullptr;
+
+    strcpy(filename, module_name);
+
+#if defined(_WIN32)
+    /* Must replace all '/' by '\\' */
+    CString.replace_char(filename, '/', '\\');
+#else
+    /* must add a '/' so that the DLL is not searched in the system library paths */
+    if (!strchr(module_name, '/')) {
+        js_free(ctx, filename);
+
+        filename = js_malloc(ctx,
+            CString.length(module_name) + 2 /* for the below 2 char string */ + 1 /* for null terminator*/);
+
+        if (filename == nullptr)
+            return nullptr;
+
+        strcpy(filename, "./");
+        strcpy(filename + 2, module_name);
+    }
+#endif /* !_WIN32 */
+
+    /* C module */
+    dylib_handle_t hd = dll_load(filename);
+
+    js_free(ctx, filename);
+
+    if (!hd) {
+        char err_msg[256] = {0};
+        size_t err_msg_sz = sizeof(err_msg);
+        JS_ThrowReferenceError(ctx, "could not load module '%s': %s", filename, dll_error(err_msg, &err_msg_sz));
         goto fail;
     }
-    init = (JSInitModuleFunc *)GetProcAddress(hd, "js_init_module");
-    if(!init) {
+
+    JSInitCModuleFunction_t *js_init_c_module = (JSInitCModuleFunction_t *) dll_symbol(hd, "js_init_module");
+
+    if (!js_init_c_module) {
         JS_ThrowReferenceError(ctx, "could not load module filename '%s': js_init_module not found", module_name);
         goto fail;
     }
 
-    m = init(ctx, module_name);
-    if(!m) {
-        JS_ThrowReferenceError(ctx, "could not load module filename '%s': initialization error", module_name);
-        goto fail;
-    }
-
-    return m;
-fail:
-    if(hd) {
-        FreeLibrary(hd);
-    }
-    return NULL;
-#else
-    JSModuleDef *m;
-    void *hd;
-    JSInitModuleFunc *init;
-    char *filename;
-
-    if (!strchr(module_name, '/')) {
-        /* must add a '/' so that the DLL is not searched in the
-           system library paths */
-        filename = js_malloc(ctx, strlen(module_name) + 2 + 1);
-        if (!filename)
-            return NULL;
-        strcpy(filename, "./");
-        strcpy(filename + 2, module_name);
-    } else {
-        filename = (char *)module_name;
-    }
-
-    /* C module */
-    hd = dlopen(filename, RTLD_NOW | RTLD_LOCAL);
-    if (filename != module_name)
-        js_free(ctx, filename);
-    if (!hd) {
-        JS_ThrowReferenceError(ctx, "could not load module filename '%s' as shared library",
-                               module_name);
-        goto fail;
-    }
-
-    init = dlsym(hd, "js_init_module");
-    if (!init) {
-        JS_ThrowReferenceError(ctx, "could not load module filename '%s': js_init_module not found",
-                               module_name);
-        goto fail;
-    }
-
-    m = init(ctx, module_name);
+    JSModuleDef *m = js_init_c_module(ctx, module_name);
     if (!m) {
-        JS_ThrowReferenceError(ctx, "could not load module filename '%s': initialization error",
-                               module_name);
-    fail:
-        if (hd)
-            dlclose(hd);
-        return NULL;
+        JS_ThrowReferenceError(ctx, "could not load module filename '%s': initialization error", filename);
+        goto fail;
     }
 
     return m;
-#endif /* !_WIN32 */
+
+fail:
+    if (hd)
+        dll_unload(hd);
+
+    return nullptr;
 }
 
-int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
-                              JS_BOOL use_realpath, JS_BOOL is_main) {
+int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val, JS_BOOL use_realpath, JS_BOOL is_main) {
     JSModuleDef *m;
     char buf[PATH_MAX + 16];
     JSValue meta_obj;

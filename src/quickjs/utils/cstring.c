@@ -11,12 +11,14 @@
 DECL_METHOD(length, size_t);
 DECL_METHOD(cmp, int, const char* other);
 DECL_METHOD(equals, bool, const char* other);
+DECL_METHOD(replace_char, size_t, char find, char replace);
 
 // Namespace model setup
 CStringPrototype CString = {
     REF_METHOD(length),
     REF_METHOD(cmp),
     REF_METHOD(equals),
+    REF_METHOD(replace_char),
 };
 
 // Implementations
@@ -40,4 +42,29 @@ IMPL_METHOD(cmp, int, const char* other) {
 
 IMPL_METHOD(equals, bool, const char* other) {
     return REF_METHOD(cmp)(self, other) == 0;
+}
+
+static
+char *cstr_find(char *str, char find) {
+    char *s = str;
+    while (*s != '\0') {
+        if (*s == find) {
+            return s;
+        }
+        s++;
+    }
+
+    return nullptr;
+}
+
+IMPL_METHOD(replace_char, size_t, char find, char replace) {
+    char *ps = (char *) self;
+    size_t o = 0;
+
+    while((ps = cstr_find(ps, find)) != nullptr) {
+        *ps++ = replace;
+        o++;
+    }
+
+    return o;
 }
