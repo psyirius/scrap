@@ -30,12 +30,8 @@
 #include "quickjs/utils/cutils.h"
 #include "quickjs/utils/list.h"
 #include "quickjs/utils/libregexp.h"
-
+#include "quickjs/utils/common.h"
 #include "quickjs/debugger/debugger.h"
-
-/* return the pointer of type 'type *' containing 'elem' as field 'member' */
-#define list_entry(elem, type, member) \
-    ((type*)((uint8_t*)(elem) - offsetof(type, member)))
 
 #ifdef CONFIG_BIGNUM
 #include "quickjs/utils/libbf.h"
@@ -84,7 +80,7 @@
   32: dump line number table
  */
 //#define DUMP_BYTECODE  (1)
-/* dump the occurence of the automatic GC */
+/* dump the occurrence of the automatic GC */
 //#define DUMP_GC
 /* dump objects freed by the garbage collector */
 //#define DUMP_GC_FREE
@@ -131,7 +127,7 @@ int gettimeofday(struct timeval *tp, struct timezone *tzp) {
 #endif
 
 enum {
-    /* classid tag        */    /* union usage   | properties */
+    /* ClassID tag        */    /* union usage   | properties */
     JS_CLASS_OBJECT = 1,        /* must be first */
     JS_CLASS_ARRAY,             /* u.array       | length */
     JS_CLASS_ERROR,
@@ -200,7 +196,7 @@ enum {
 /* number of typed array types */
 #define JS_TYPED_ARRAY_COUNT  (JS_CLASS_FLOAT64_ARRAY - JS_CLASS_UINT8C_ARRAY + 1)
 static uint8_t const typed_array_size_log2[JS_TYPED_ARRAY_COUNT];
-#define typed_array_size_log2(classid)  (typed_array_size_log2[(classid)- JS_CLASS_UINT8C_ARRAY])
+#define typed_array_size_log2(classId)  (typed_array_size_log2[(classId)- JS_CLASS_UINT8C_ARRAY])
 
 typedef enum JSErrorEnum {
     JS_EVAL_ERROR,
@@ -343,8 +339,9 @@ struct JSClass {
 #define JS_MODE_STRIP  (1 << 1)
 #define JS_MODE_MATH   (1 << 2)
 
-typedef struct JSStackFrame {
-    struct JSStackFrame *prev_frame; /* NULL if first stack frame */
+typedef struct JSStackFrame JSStackFrame;
+struct JSStackFrame {
+    JSStackFrame *prev_frame; /* NULL if first stack frame */
     JSValue cur_func; /* current function, JS_UNDEFINED if the frame is detached */
     JSValue *arg_buf; /* arguments */
     JSValue *var_buf; /* variables */
@@ -356,7 +353,7 @@ typedef struct JSStackFrame {
     /* only used in generators. Current stack pointer value. NULL if
        the function is running. */
     JSValue *cur_sp;
-} JSStackFrame;
+};
 
 typedef enum {
     JS_GC_OBJ_TYPE_JS_OBJECT,
@@ -383,8 +380,8 @@ typedef struct JSVarRef {
     union {
         JSGCObjectHeader header; /* must come first */
         struct {
-            int __gc_ref_count; /* corresponds to header.ref_count */
-            uint8_t __gc_mark; /* corresponds to header.mark/gc_obj_type */
+            int __gc_ref_count;  /* corresponds to header.ref_count */
+            uint8_t __gc_mark;   /* corresponds to header.mark/gc_obj_type */
 
             /* 0 : the JSVarRef is on the stack. header.link is an element
                of JSStackFrame.var_ref_list.
@@ -392,12 +389,10 @@ typedef struct JSVarRef {
             */
             uint8_t is_detached : 1;
             uint8_t is_arg : 1;
-            uint16_t var_idx; /* index of the corresponding function variable on
-                                 the stack */
+            uint16_t var_idx;    /* index of the corresponding function variable on the stack */
         };
     };
-    JSValue *pvalue; /* pointer to the value, either on the stack or
-                        to 'value' */
+    JSValue *pvalue; /* pointer to the value, either on the stack or to 'value' */
     JSValue value; /* used when the variable is no longer on the stack */
 } JSVarRef;
 
@@ -408,8 +403,7 @@ typedef struct JSFloatEnv {
     unsigned int status;
 } JSFloatEnv;
 
-/* the same structure is used for big integers and big floats. Big
-   integers are never infinite or NaNs */
+/* the same structure is used for big integers and big floats. Big integers are never infinite or NaNs */
 typedef struct JSBigFloat {
     JSRefCountHeader header; /* must come first, 32-bit */
     bf_t num;
@@ -455,7 +449,7 @@ struct JSContext {
     JSValue throw_type_error;
     JSValue eval_obj;
 
-    JSValue global_obj; /* global object */
+    JSValue global_obj;     /* global object */
     JSValue global_var_obj; /* contains the global let/const definitions */
 
     JSGlobalAccessFunctions *global_access_funcs;
@@ -464,23 +458,20 @@ struct JSContext {
     uint64_t random_state;
 #ifdef CONFIG_BIGNUM
     bf_context_t *bf_ctx;   /* points to rt->bf_ctx, shared by all contexts */
-    JSFloatEnv fp_env; /* global FP environment */
-    BOOL bignum_ext : 8; /* enable math mode */
+    JSFloatEnv fp_env;      /* global FP environment */
+    BOOL bignum_ext : 8;    /* enable math mode */
     BOOL allow_operator_overloading : 8;
 #endif
-    /* when the counter reaches zero, JSRutime.interrupt_handler is called */
+    /* when the counter reaches zero, JSRuntime.interrupt_handler is called */
     int interrupt_counter;
     BOOL is_error_property_enabled;
 
-    ListNode loaded_modules; /* list of JSModuleDef.link */
+    ListNode loaded_modules;   /* list of JSModuleDef.link */
 
     /* if NULL, RegExp compilation is not supported */
-    JSValue (*compile_regexp)(JSContext *ctx, JSValueConst pattern,
-                              JSValueConst flags);
+    JSValue (*compile_regexp)(JSContext *ctx, JSValueConst pattern, JSValueConst flags);
     /* if NULL, eval is not supported */
-    JSValue (*eval_internal)(JSContext *ctx, JSValueConst this_obj,
-                             const char *input, size_t input_len,
-                             const char *filename, int flags, int scope_idx);
+    JSValue (*eval_internal)(JSContext *ctx, JSValueConst this_obj, const char *input, size_t input_len, const char *filename, int flags, int scope_idx);
     void *user_opaque;
 };
 
@@ -535,10 +526,10 @@ typedef struct JSClosureVar {
     uint8_t is_const : 1;
     uint8_t is_lexical : 1;
     uint8_t var_kind : 4; /* see JSVarKindEnum */
+    
     /* 8 bits available */
-    uint16_t var_idx; /* is_local = TRUE: index to a normal variable of the
-                    parent function. otherwise: index to a closure
-                    variable of the parent function */
+    uint16_t var_idx; /* is_local = TRUE: index to a normal variable of the parent function.
+                               otherwise: index to a closure variable of the parent function. */
     JSAtom var_name;
 } JSClosureVar;
 

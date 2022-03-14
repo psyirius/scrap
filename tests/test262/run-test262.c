@@ -24,9 +24,7 @@
 
 #define CMD_NAME "run-test262"
 
-/* return the pointer of type 'type *' containing 'elem' as field 'member' */
-#define list_entry(elem, type, member) \
-    ((type*)((uint8_t*)(elem) - offsetof(type, member)))
+#include "quickjs/utils/common.h"
 
 typedef struct namelist_t {
     char **array;

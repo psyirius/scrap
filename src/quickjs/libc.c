@@ -63,9 +63,7 @@ typedef sig_t sighandler_t;
 #include "quickjs/utils/list.h"
 #include "quickjs/libc.h"
 
-/* return the pointer of type 'type *' containing 'elem' as field 'member' */
-#define list_entry(elem, type, member) \
-    ((type*)((uint8_t*)(elem) - offsetof(type, member)))
+#include "quickjs/utils/common.h"
 
 /* TODO:
    - add socket calls
@@ -442,7 +440,7 @@ typedef JSModuleDef *(JSInitModuleFunc)(JSContext *ctx,
                                         const char *module_name);
 
 
-static 
+static
 JSModuleDef *js_module_loader_so(JSContext *ctx, const char *module_name) {
 #if defined(_WIN32)
     HINSTANCE hd;
