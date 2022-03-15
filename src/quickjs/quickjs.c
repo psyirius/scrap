@@ -272,7 +272,7 @@ struct JSRuntime {
     JSGCPhaseEnum gc_phase : 8;
     size_t malloc_gc_threshold;
 #ifdef DUMP_LEAKS
-    struct list_head string_list; /* list of JSString.link */
+    ListNode string_list; /* list of JSString.link */
 #endif
     /* stack limitation */
     uintptr_t stack_size; /* in bytes, 0 if no limit */
@@ -515,7 +515,7 @@ struct JSString {
     uint8_t atom_type : 2; /* != 0 if atom, JS_ATOM_TYPE_x */
     uint32_t hash_next; /* atom_index for JS_ATOM_TYPE_SYMBOL */
 #ifdef DUMP_LEAKS
-    struct list_head link; /* string list */
+    ListNode link; /* string list */
 #endif
     union {
         uint8_t str8[0]; /* 8 bit strings will get an extra null terminator */

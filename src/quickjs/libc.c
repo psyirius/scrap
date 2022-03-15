@@ -2979,10 +2979,10 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val, int argc, JSVal
                     _exit(127);
             }
     #if !defined(_WIN32)
-            } else {
+            else {
                 term_exit();
-    #endif
             }
+    #endif
         }
 
         if (!file)
@@ -2993,8 +2993,10 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val, int argc, JSVal
             ret = my_execvpe(file, (char **)exec_argv, envp);
         else
             ret = execve(file, (char **)exec_argv, envp);
+            
         _exit(127);
     }
+    
     /* parent */
     if (block_flag) {
         for(;;) {
@@ -3013,10 +3015,11 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val, int argc, JSVal
         ret = pid;
     }
     ret_val = JS_NewInt32(ctx, ret);
+
  done:
     JS_FreeCString(ctx, file);
     JS_FreeCString(ctx, cwd);
-    for(i = 0; i < exec_argc; i++)
+    for (i = 0; i < exec_argc; i++)
         JS_FreeCString(ctx, exec_argv[i]);
     js_free(ctx, exec_argv);
     if (envp != environ) {
@@ -3029,7 +3032,8 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val, int argc, JSVal
         js_free(ctx, envp);
     }
     return ret_val;
- exception:
+
+exception:
     ret_val = JS_EXCEPTION;
     goto done;
 }
@@ -3208,7 +3212,7 @@ static void js_free_message(JSWorkerMessage *msg) {
 static void js_free_message_pipe(JSWorkerMessagePipe *ps) {
     if (!ps) return;
 
-    struct list_head *el, *el1;
+    ListNode *el, *el1;
     JSWorkerMessage *msg;
     int ref_count;
 
