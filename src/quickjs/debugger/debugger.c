@@ -47,7 +47,7 @@ int js_transport_write_message_newline(JSDebuggerInfo *info, const char* value, 
     char* buf = malloc(len + 1);
     memcpy(buf, value, len);
     buf[len] = '\0';
-    fprintf(stderr, "Debugger::send(%d): %s\n\n", len, buf);
+    fprintf(stderr, "Debugger::send(%ld): %s\n\n", len, buf);
     fflush(stderr);
     free(buf);
 
