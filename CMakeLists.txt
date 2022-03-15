@@ -81,7 +81,6 @@ if (!MSVC)
     target_compile_options(${QJS_CORE_TARGET} PRIVATE qjs_cflags)
 endif()
 
-
 target_compile_definitions(${QJS_CORE_TARGET} PUBLIC
     CONFIG_VERSION="${QJS_VERSION}"
     CONFIG_BIGNUM
@@ -104,6 +103,8 @@ add_executable(${QJS_COMPILER_TARGET} ${QJS_SOURCE_DIR}/qjsc.c)
 target_link_libraries(${QJS_COMPILER_TARGET} PRIVATE ${QJS_CORE_TARGET})
 
 set(QJSC_GENERATED_DIR ${QJS_GENERATED_DIR}/qjsc)
+
+file(MAKE_DIRECTORY ${QJSC_GENERATED_DIR})
 
 add_custom_command(
     OUTPUT ${QJSC_GENERATED_DIR}/repl.c ${QJSC_GENERATED_DIR}/calc.c ${QJSC_GENERATED_DIR}/test.c
