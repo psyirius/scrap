@@ -1079,7 +1079,7 @@ void JS_FreeContext(JSContext *ctx)
 #endif
 #ifdef DUMP_OBJECTS
     {
-        struct list_head *el;
+        ListNode *el;
         JSGCObjectHeader *p;
         printf("JSObjects: {\n");
         JS_DumpObjectHeader(ctx->rt);

@@ -2159,7 +2159,7 @@ static int handle_posted_message(JSRuntime *rt, JSContext *ctx,
 {
     JSWorkerMessagePipe *ps = port->recv_pipe;
     int ret;
-    struct list_head *el;
+    ListNode *el;
     JSWorkerMessage *msg;
     JSValue obj, data_obj, func, retval;
 
@@ -2234,7 +2234,7 @@ static int js_os_poll(JSContext *ctx)
     int64_t cur_time, delay;
     fd_set rfds, wfds;
     JSOSRWHandler *rh;
-    struct list_head *el;
+    ListNode *el;
     struct timeval tv, *tvp;
 
     /* only check signals in the main thread */

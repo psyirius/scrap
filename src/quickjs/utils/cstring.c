@@ -1,6 +1,7 @@
 #include "quickjs/utils/cstring.h"
 
 #include <assert.h>
+#include <stddef.h>
 
 // Init in-type scope
 #define CT_NAME CString

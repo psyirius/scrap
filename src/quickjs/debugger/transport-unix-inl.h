@@ -125,7 +125,7 @@ void js_debugger_connect(JSContext *ctx, const char *address) {
     assert(connect(client, (const struct sockaddr *)&addr, sizeof(addr)) == 0);
 
     JS_DebuggerTransportData *data = (JS_DebuggerTransportData *)malloc(sizeof(JS_DebuggerTransportData));
-    memset(data, 0, sizeof(js_transport_data));
+    memset(data, 0, sizeof(JS_DebuggerTransportData));
     data->handle = client;
     js_debugger_attach(ctx, js_transport_read, js_transport_write, js_transport_peek, js_transport_close, data);
 }
@@ -150,7 +150,7 @@ void js_debugger_wait_connection(JSContext *ctx, const char* address) {
     assert(client >= 0);
 
     JS_DebuggerTransportData *data = (JS_DebuggerTransportData *)malloc(sizeof(JS_DebuggerTransportData));
-    memset(data, 0, sizeof(js_transport_data));
+    memset(data, 0, sizeof(JS_DebuggerTransportData));
     data->handle = client;
     js_debugger_attach(ctx, js_transport_read, js_transport_write, js_transport_peek, js_transport_close, data);
 }
