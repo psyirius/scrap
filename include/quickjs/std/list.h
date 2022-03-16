@@ -9,7 +9,7 @@
 #include "quickjs/macros/types.h"
 #include "quickjs/macros/function.h"
 
-DEF_UNION(ListData) {
+DECL_UNION(ListData) {
     int8_t  i8;
     uint8_t u8;
 
@@ -26,10 +26,12 @@ DEF_UNION(ListData) {
     float64_t f64;
 
     char* str;
+
+    // for generic use
     void* ptr;
 };
 
-DEF_STRUCT(ListNode) {
+DECL_STRUCT(ListNode) {
     // List props
     ListNode *head;
 
@@ -74,7 +76,7 @@ DEF_FUNC_TYPE(ListComparator, bool, ListNode* prev, ListNode* next);
 #include "quickjs/macros/ctypi.h"
 
 // Namespace model
-DEF_STRUCT(ListPrototype) {
+DECL_STRUCT(ListPrototype) {
     DEF_STATIC_METHOD(new, ListNode*);
     DEF_STATIC_METHOD(new_node, ListNode*);
     DEF_STATIC_METHOD(ctor, void, ListNode *node);
@@ -95,4 +97,6 @@ DEF_STRUCT(ListPrototype) {
 
 extern ListPrototype List;
 
+#if !defined(INCLUDE_FROM_IMPL_C)
 #include "quickjs/macros/ctypi.h"
+#endif

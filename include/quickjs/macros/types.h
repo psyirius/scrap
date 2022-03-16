@@ -30,3 +30,5 @@ typedef long double float64_t;
 #ifndef false
 #define false 0
 #endif
+
+#define cast_as(value, type) ((type*) &self)[0]

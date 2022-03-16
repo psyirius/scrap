@@ -1,6 +1,6 @@
 #include "quickjs/debugger/debugger.h"
 
-#include "quickjs/utils/cstring.h"
+#include "quickjs/std/cstring.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -230,11 +230,37 @@ void js_send_stopped_event(JSDebuggerInfo *info, const char *reason) {
 }
 
 static
+void js_send_stopped_event_exception(JSDebuggerInfo *info) {
+    JSContext *ctx = info->debugging_ctx;
+
+    JSValue event = JS_NewObject(ctx);
+
+    JS_SetPropertyStr(ctx, event, "type", JS_NewString(ctx, "StoppedEvent"));
+    JS_SetPropertyStr(ctx, event, "reason", JS_NewString(ctx, "exception"));
+
+    JSValue err = info->current_exception;
+    JSValue msg = JS_GetPropertyStr(ctx, err, "message");
+    if (!JS_IsUndefined(msg)) {
+        const char* msg_cstr = JS_ToCString(ctx, msg);
+        JS_SetPropertyStr(ctx, event, "message", JS_NewString(ctx, msg_cstr));
+        JS_FreeCString(ctx, msg_cstr);
+    }
+    JS_FreeValue(ctx, msg);
+
+    // change it to something std
+    int64_t id = (int64_t) info->ctx;
+
+    JS_SetPropertyStr(ctx, event, "thread", JS_NewInt64(ctx, id));
+    js_transport_send_event(info, event);
+}
+
+static
 void js_free_prop_enum(JSContext *ctx, JSPropertyEnum *tab, uint32_t len) {
     uint32_t i;
     if (tab) {
-        for(i = 0; i < len; i++)
+        for (i = 0; i < len; i++) {
             JS_FreeAtom(ctx, tab[i].atom);
+        }
         js_free(ctx, tab);
     }
 }
@@ -487,14 +513,14 @@ int js_process_debugger_messages(JSDebuggerInfo *info, const uint8_t *cur_pc) {
         if (!js_transport_read_fully(info, info->message_buffer, message_length))
             goto done;
 
+        info->message_buffer[message_length] = '\0';
+
         char* _buf = malloc(message_length + 1);
         memcpy(_buf, info->message_buffer, message_length);
         _buf[message_length] = '\0';
         fprintf(stderr, "Debugger::recv(%d): %s\n", message_length, _buf);
         fflush(stderr);
         free(_buf);
-
-        info->message_buffer[message_length] = '\0';
 
         JSValue message = JS_ParseJSON(ctx, info->message_buffer, message_length, "<debugger>");
         JSValue val_type = JS_GetPropertyStr(ctx, message, "type");
@@ -529,18 +555,22 @@ done:
     return ret;
 }
 
-void js_debugger_exception(JSContext *ctx) {
+void js_debugger_exception(JSContext *ctx, JSValue err) {
     JSDebuggerInfo *info = js_debugger_info(JS_GetRuntime(ctx));
+
     if (!info->exception_breakpoint)
         return;
+
     if (info->is_debugging)
         return;
-    info->is_debugging = 1;
+
+    info->is_debugging = true;
     info->ctx = ctx;
-    js_send_stopped_event(info, "exception");
+    info->current_exception = err;
+    js_send_stopped_event_exception(info);
     info->is_paused = 1;
     js_process_debugger_messages(info, NULL);
-    info->is_debugging = 0;
+    info->is_debugging = false;
     info->ctx = NULL;
 }
 

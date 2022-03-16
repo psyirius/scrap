@@ -29,9 +29,10 @@
 
 #include "quickjs/quickjs.h"
 
+#include "quickjs/std/list.h"
+#include "quickjs/std/cstring.h"
+
 #include "quickjs/utils/cutils.h"
-#include "quickjs/utils/list.h"
-#include "quickjs/utils/cstring.h"
 #include "quickjs/utils/libregexp.h"
 #include "quickjs/utils/common.h"
 #include "quickjs/debugger/debugger.h"

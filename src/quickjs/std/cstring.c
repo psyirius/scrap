@@ -1,12 +1,9 @@
-#include "quickjs/utils/cstring.h"
+#define INCLUDE_FROM_IMPL_C
+#include "quickjs/std/cstring.h"
+#undef INCLUDE_FROM_IMPL_C
 
 #include <assert.h>
 #include <stddef.h>
-
-// Init in-type scope
-#define CT_NAME CString
-#define CT_TYPE const char*
-#include "quickjs/macros/ctypi.h"
 
 // Declarations
 DECL_METHOD(length, size_t);

@@ -1,5 +1,5 @@
 /*
- * CString implementation
+ * CString utilities
  */
 #pragma once
 
@@ -14,7 +14,7 @@
 #include "quickjs/macros/ctypi.h"
 
 // Namespace model
-DEF_STRUCT(CStringPrototype) {
+DECL_STRUCT(CStringPrototype) {
     DEF_METHOD(length, size_t);
     DEF_METHOD(cmp, int, const char* other);
     DEF_METHOD(equals, bool, const char* other);
@@ -26,4 +26,6 @@ DEF_STRUCT(CStringPrototype) {
 
 extern CStringPrototype CString;
 
+#if !defined(INCLUDE_FROM_IMPL_C)
 #include "quickjs/macros/ctypi.h"
+#endif

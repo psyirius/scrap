@@ -1,12 +1,9 @@
-#include "quickjs/utils/list.h"
+#define INCLUDE_FROM_IMPL_C
+#include "quickjs/std/list.h"
+#undef INCLUDE_FROM_IMPL_C
 
 #include <stdlib.h>
 #include <assert.h>
-
-// Init in-type scope
-#define CT_NAME List
-#define CT_TYPE ListNode*
-#include "quickjs/macros/ctypi.h"
 
 // Declarations
 DECL_STATIC_METHOD(new, ListNode*);
@@ -307,5 +304,3 @@ IMPL_METHOD(destroy, void) {
     REF_STATIC_METHOD(delete)(self);
 }
 
-// De-init in-type scope
-#include "quickjs/macros/ctypi.h"

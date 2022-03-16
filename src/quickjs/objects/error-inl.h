@@ -36,9 +36,8 @@ static JSValue iterator_to_array(JSContext *ctx, JSValueConst items)
     goto done;
 }
 
-static JSValue js_error_constructor(JSContext *ctx, JSValueConst new_target,
-                                    int argc, JSValueConst *argv, int magic)
-{
+static
+JSValue js_error_constructor(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv, int magic) {
     JSValue obj, msg, proto;
     JSValueConst message;
 
@@ -91,7 +90,8 @@ static JSValue js_error_constructor(JSContext *ctx, JSValueConst new_target,
     /* skip the Error() function in the backtrace */
     build_backtrace(ctx, obj, NULL, 0, JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL);
     return obj;
-    exception:
+
+exception:
     JS_FreeValue(ctx, obj);
     return JS_EXCEPTION;
 }

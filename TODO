@@ -1,3 +1,9 @@
+TODO-Debugger:
+- exception protocol schema.
+- breakpoints.
+- add exception message.
+- break at entry.
+
 TODO:NF:
 - Fix failing tests
 - Ensure cross-platform compat.

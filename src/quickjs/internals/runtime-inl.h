@@ -4710,8 +4710,7 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
                            s->js_func_size + s->js_func_code_size + s->js_func_pc2line_size;
 }
 
-void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
-{
+void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt) {
     fprintf(fp, "QuickJS memory usage -- "
                 #ifdef CONFIG_BIGNUM
                 "BigNum "
@@ -4839,24 +4838,19 @@ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
     }
 }
 
-JSValue JS_GetGlobalObject(JSContext *ctx)
-{
+JSValue JS_GetGlobalObject(JSContext *ctx) {
     return JS_DupValue(ctx, ctx->global_obj);
 }
 
 /* WARNING: obj is freed */
-JSValue JS_Throw(JSContext *ctx, JSValue obj)
-{
-    JSRuntime *rt = ctx->rt;
-    JS_FreeValue(ctx, rt->current_exception);
-    rt->current_exception = obj;
-    js_debugger_exception(ctx);
+JSValue JS_Throw(JSContext *ctx, JSValue obj) {
+    JS_FreeValue(ctx, ctx->rt->current_exception);
+    ctx->rt->current_exception = obj;
     return JS_EXCEPTION;
 }
 
 /* return the pending exception (cannot be called twice). */
-JSValue JS_GetException(JSContext *ctx)
-{
+JSValue JS_GetException(JSContext *ctx) {
     JSValue val;
     JSRuntime *rt = ctx->rt;
     val = rt->current_exception;
@@ -4864,8 +4858,8 @@ JSValue JS_GetException(JSContext *ctx)
     return val;
 }
 
-static void dbuf_put_leb128(DynBuf *s, uint32_t v)
-{
+static
+void dbuf_put_leb128(DynBuf *s, uint32_t v) {
     uint32_t a;
     for(;;) {
         a = v & 0x7f;
@@ -4879,15 +4873,14 @@ static void dbuf_put_leb128(DynBuf *s, uint32_t v)
     }
 }
 
-static void dbuf_put_sleb128(DynBuf *s, int32_t v1)
-{
+static
+void dbuf_put_sleb128(DynBuf *s, int32_t v1) {
     uint32_t v = v1;
     dbuf_put_leb128(s, (2 * v) ^ -(v >> 31));
 }
 
-static int get_leb128(uint32_t *pval, const uint8_t *buf,
-                      const uint8_t *buf_end)
-{
+static
+int get_leb128(uint32_t *pval, const uint8_t *buf, const uint8_t *buf_end) {
     const uint8_t *ptr = buf;
     uint32_t v, a, i;
     v = 0;
@@ -4905,9 +4898,8 @@ static int get_leb128(uint32_t *pval, const uint8_t *buf,
     return -1;
 }
 
-static int get_sleb128(int32_t *pval, const uint8_t *buf,
-                       const uint8_t *buf_end)
-{
+static
+int get_sleb128(int32_t *pval, const uint8_t *buf, const uint8_t *buf_end) {
     int ret;
     uint32_t val;
     ret = get_leb128(&val, buf, buf_end);
@@ -4919,9 +4911,8 @@ static int get_sleb128(int32_t *pval, const uint8_t *buf,
     return ret;
 }
 
-static int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
-                         uint32_t pc_value)
-{
+static
+int find_line_num(JSContext *ctx, JSFunctionBytecode *b, uint32_t pc_value) {
     const uint8_t *p_end, *p;
     int new_line_num, line_num, pc, v, ret;
     unsigned int op;
@@ -4961,14 +4952,15 @@ static int find_line_num(JSContext *ctx, JSFunctionBytecode *b,
             return line_num;
         line_num = new_line_num;
     }
+
     return line_num;
 }
 
 /* in order to avoid executing arbitrary code during the stack trace
    generation, we only look at simple 'name' properties containing a
    string. */
-static const char *get_func_name(JSContext *ctx, JSValueConst func)
-{
+static
+const char *get_func_name(JSContext *ctx, JSValueConst func) {
     JSProperty *pr;
     JSShapeProperty *prs;
     JSValueConst val;
@@ -5009,14 +5001,15 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj, const char *filenam
             dbuf_printf(&dbuf, ":%d", line_num);
         dbuf_putc(&dbuf, '\n');
         str = JS_NewString(ctx, filename);
-        JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_fileName, str,
-                               JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
-        JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_lineNumber, JS_NewInt32(ctx, line_num),
-                               JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+        JS_DefinePropertyValue(ctx,
+            error_obj, JS_ATOM_fileName, str, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+        JS_DefinePropertyValue(ctx,
+            error_obj, JS_ATOM_lineNumber, JS_NewInt32(ctx, line_num), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
         if (backtrace_flags & JS_BACKTRACE_FLAG_SINGLE_LEVEL)
             goto done;
     }
-    for(sf = ctx->rt->current_stack_frame; sf != NULL; sf = sf->prev_frame) {
+
+    for (sf = ctx->rt->current_stack_frame; sf != NULL; sf = sf->prev_frame) {
         if (backtrace_flags & JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL) {
             backtrace_flags &= ~JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL;
             continue;
@@ -5039,8 +5032,7 @@ void build_backtrace(JSContext *ctx, JSValueConst error_obj, const char *filenam
             b = p->u.func.function_bytecode;
             backtrace_barrier = b->backtrace_barrier;
             if (b->has_debug) {
-                line_num1 = find_line_num(ctx, b,
-                                          sf->cur_pc - b->byte_code_buf - 1);
+                line_num1 = find_line_num(ctx, b, sf->cur_pc - b->byte_code_buf - 1);
                 atom_str = JS_AtomToCString(ctx, b->debug.filename);
                 dbuf_printf(&dbuf, " (%s",
                             atom_str ? atom_str : "<null>");
@@ -5097,12 +5089,12 @@ done:
     }
 
     dbuf_free(&dbuf);
+
     JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_stack, str, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
 }
 
 /* Note: it is important that no exception is returned by this function */
-static BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj)
-{
+static BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj) {
     JSObject *p;
     if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
         return FALSE;
@@ -5114,51 +5106,45 @@ static BOOL is_backtrace_needed(JSContext *ctx, JSValueConst obj)
     return TRUE;
 }
 
-JSValue JS_NewError(JSContext *ctx)
-{
+JSValue JS_NewError(JSContext *ctx) {
     return JS_NewObjectClass(ctx, JS_CLASS_ERROR);
 }
 
-static JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num,
-                              const char *fmt, va_list ap, BOOL add_backtrace)
-{
+static
+JSValue JS_ThrowError2(JSContext *ctx, JSErrorEnum error_num, const char *fmt, va_list ap, BOOL add_backtrace) {
     char buf[256];
     JSValue obj, ret;
 
     vsnprintf(buf, sizeof(buf), fmt, ap);
-    obj = JS_NewObjectProtoClass(ctx, ctx->native_error_proto[error_num],
-                                 JS_CLASS_ERROR);
+    obj = JS_NewObjectProtoClass(ctx, ctx->native_error_proto[error_num], JS_CLASS_ERROR);
     if (unlikely(JS_IsException(obj))) {
         /* out of memory: throw JS_NULL to avoid recursing */
         obj = JS_NULL;
     } else {
-        JS_DefinePropertyValue(ctx, obj, JS_ATOM_message,
-                               JS_NewString(ctx, buf),
-                               JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+        JS_DefinePropertyValue(ctx,
+            obj, JS_ATOM_message, JS_NewString(ctx, buf), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
     }
+
     if (add_backtrace) {
         build_backtrace(ctx, obj, NULL, 0, 0);
     }
+
     ret = JS_Throw(ctx, obj);
+
     return ret;
 }
 
-static JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
-                             const char *fmt, va_list ap)
-{
+static
+JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num, const char *fmt, va_list ap) {
     JSRuntime *rt = ctx->rt;
-    JSStackFrame *sf;
-    BOOL add_backtrace;
 
     /* the backtrace is added later if called from a bytecode function */
-    sf = rt->current_stack_frame;
-    add_backtrace = !rt->in_out_of_memory &&
-                    (!sf || (JS_GetFunctionBytecode(sf->cur_func) == NULL));
+    JSStackFrame *sf = rt->current_stack_frame;
+    BOOL add_backtrace = !rt->in_out_of_memory && (!sf || (JS_GetFunctionBytecode(sf->cur_func) == NULL));
     return JS_ThrowError2(ctx, error_num, fmt, ap, add_backtrace);
 }
 
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowSyntaxError(JSContext *ctx, const char *fmt, ...)
-{
+JSValue __attribute__((format(printf, 2, 3))) JS_ThrowSyntaxError(JSContext *ctx, const char *fmt, ...) {
     JSValue val;
     va_list ap;
 
@@ -5168,8 +5154,7 @@ JSValue __attribute__((format(printf, 2, 3))) JS_ThrowSyntaxError(JSContext *ctx
     return val;
 }
 
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowTypeError(JSContext *ctx, const char *fmt, ...)
-{
+JSValue __attribute__((format(printf, 2, 3))) JS_ThrowTypeError(JSContext *ctx, const char *fmt, ...) {
     JSValue val;
     va_list ap;
 
@@ -5179,8 +5164,8 @@ JSValue __attribute__((format(printf, 2, 3))) JS_ThrowTypeError(JSContext *ctx, 
     return val;
 }
 
-static int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...)
-{
+static
+int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...) {
     va_list ap;
 
     if ((flags & JS_PROP_THROW) ||
@@ -5195,16 +5180,15 @@ static int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSCont
 }
 
 /* never use it directly */
-static JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
-{
+static
+JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...) {
     char buf[ATOM_GET_STR_BUF_SIZE];
-    return JS_ThrowTypeError(ctx, fmt,
-                             JS_AtomGetStr(ctx, buf, sizeof(buf), atom));
+    return JS_ThrowTypeError(ctx, fmt, JS_AtomGetStr(ctx, buf, sizeof(buf), atom));
 }
 
 /* never use it directly */
-static JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
-{
+static
+JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...) {
     char buf[ATOM_GET_STR_BUF_SIZE];
     return JS_ThrowSyntaxError(ctx, fmt,
                                JS_AtomGetStr(ctx, buf, sizeof(buf), atom));
@@ -5215,8 +5199,8 @@ static JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(J
 #define JS_ThrowTypeErrorAtom(ctx, fmt, atom) __JS_ThrowTypeErrorAtom(ctx, atom, fmt, "")
 #define JS_ThrowSyntaxErrorAtom(ctx, fmt, atom) __JS_ThrowSyntaxErrorAtom(ctx, atom, fmt, "")
 
-static int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom)
-{
+static
+int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom) {
     if ((flags & JS_PROP_THROW) ||
         ((flags & JS_PROP_THROW_STRICT) && is_strict_mode(ctx))) {
         JS_ThrowTypeErrorAtom(ctx, "'%s' is read-only", atom);
@@ -5226,8 +5210,7 @@ static int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom)
     }
 }
 
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowReferenceError(JSContext *ctx, const char *fmt, ...)
-{
+JSValue __attribute__((format(printf, 2, 3))) JS_ThrowReferenceError(JSContext *ctx, const char *fmt, ...) {
     JSValue val;
     va_list ap;
 
@@ -5237,8 +5220,7 @@ JSValue __attribute__((format(printf, 2, 3))) JS_ThrowReferenceError(JSContext *
     return val;
 }
 
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowRangeError(JSContext *ctx, const char *fmt, ...)
-{
+JSValue __attribute__((format(printf, 2, 3))) JS_ThrowRangeError(JSContext *ctx, const char *fmt, ...) {
     JSValue val;
     va_list ap;
 
@@ -5248,8 +5230,7 @@ JSValue __attribute__((format(printf, 2, 3))) JS_ThrowRangeError(JSContext *ctx,
     return val;
 }
 
-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...)
-{
+JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...) {
     JSValue val;
     va_list ap;
 
@@ -5259,8 +5240,7 @@ JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *c
     return val;
 }
 
-JSValue JS_ThrowOutOfMemory(JSContext *ctx)
-{
+JSValue JS_ThrowOutOfMemory(JSContext *ctx) {
     JSRuntime *rt = ctx->rt;
     if (!rt->in_out_of_memory) {
         rt->in_out_of_memory = TRUE;
@@ -5288,8 +5268,7 @@ static JSValue JS_ThrowTypeErrorNotASymbol(JSContext *ctx)
 static JSValue JS_ThrowReferenceErrorNotDefined(JSContext *ctx, JSAtom name)
 {
     char buf[ATOM_GET_STR_BUF_SIZE];
-    return JS_ThrowReferenceError(ctx, "'%s' is not defined",
-                                  JS_AtomGetStr(ctx, buf, sizeof(buf), name));
+    return JS_ThrowReferenceError(ctx, "'%s' is not defined", JS_AtomGetStr(ctx, buf, sizeof(buf), name));
 }
 
 static JSValue JS_ThrowReferenceErrorUninitialized(JSContext *ctx, JSAtom name)
@@ -5322,8 +5301,8 @@ JSValue JS_ThrowTypeErrorInvalidClass(JSContext *ctx, JSClassID class_id) {
     return JS_ThrowTypeErrorAtom(ctx, "%s object expected", name);
 }
 
-static no_inline __exception int __js_poll_interrupts(JSContext *ctx)
-{
+static
+no_inline __exception int __js_poll_interrupts(JSContext *ctx) {
     JSRuntime *rt = ctx->rt;
     ctx->interrupt_counter = JS_INTERRUPT_COUNTER_INIT;
     if (rt->interrupt_handler) {
@@ -8362,32 +8341,28 @@ BOOL JS_IsError(JSContext *ctx, JSValueConst val)
 }
 
 /* used to avoid catching interrupt exceptions */
-BOOL JS_IsUncatchableError(JSContext *ctx, JSValueConst val)
-{
-    JSObject *p;
+BOOL JS_IsUncatchableError(JSContext *ctx, JSValueConst val) {
     if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
         return FALSE;
-    p = JS_VALUE_GET_OBJ(val);
+    JSObject *p = JS_VALUE_GET_OBJ(val);
     return p->class_id == JS_CLASS_ERROR && p->is_uncatchable_error;
 }
 
-void JS_SetUncatchableError(JSContext *ctx, JSValueConst val, BOOL flag)
-{
-    JSObject *p;
+void JS_SetUncatchableError(JSContext *ctx, JSValueConst val, BOOL flag) {
     if (JS_VALUE_GET_TAG(val) != JS_TAG_OBJECT)
         return;
-    p = JS_VALUE_GET_OBJ(val);
+
+    JSObject *p = JS_VALUE_GET_OBJ(val);
+
     if (p->class_id == JS_CLASS_ERROR)
         p->is_uncatchable_error = flag;
 }
 
-void JS_ResetUncatchableError(JSContext *ctx)
-{
+void JS_ResetUncatchableError(JSContext *ctx) {
     JS_SetUncatchableError(ctx, ctx->rt->current_exception, FALSE);
 }
 
-void JS_SetOpaque(JSValue obj, void *opaque)
-{
+void JS_SetOpaque(JSValue obj, void *opaque) {
     JSObject *p;
     if (JS_VALUE_GET_TAG(obj) == JS_TAG_OBJECT) {
         p = JS_VALUE_GET_OBJ(obj);
@@ -8396,8 +8371,7 @@ void JS_SetOpaque(JSValue obj, void *opaque)
 }
 
 /* return NULL if not an object of class class_id */
-void *JS_GetOpaque(JSValueConst obj, JSClassID class_id)
-{
+void *JS_GetOpaque(JSValueConst obj, JSClassID class_id) {
     JSObject *p;
     if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
         return NULL;
@@ -8407,8 +8381,7 @@ void *JS_GetOpaque(JSValueConst obj, JSClassID class_id)
     return p->u.opaque;
 }
 
-void *JS_GetOpaque2(JSContext *ctx, JSValueConst obj, JSClassID class_id)
-{
+void *JS_GetOpaque2(JSContext *ctx, JSValueConst obj, JSClassID class_id) {
     void *p = JS_GetOpaque(obj, class_id);
     if (unlikely(!p)) {
         JS_ThrowTypeErrorInvalidClass(ctx, class_id);
@@ -14389,7 +14362,7 @@ static JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
         case JS_CFUNC_constructor_or_func:
             if (!(flags & JS_CALL_FLAG_CONSTRUCTOR)) {
                 if (cproto == JS_CFUNC_constructor) {
-                    not_a_constructor:
+not_a_constructor:
                     ret_val = JS_ThrowTypeError(ctx, "must be called with new");
                     break;
                 } else {
@@ -14427,8 +14400,7 @@ static JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
         case JS_CFUNC_setter_magic:
             ret_val = func.setter_magic(ctx, this_obj, arg_buf[0], p->u.cfunc.magic);
             break;
-        case JS_CFUNC_f_f:
-        {
+        case JS_CFUNC_f_f: {
             double d1;
 
             if (unlikely(JS_ToFloat64(ctx, &d1, arg_buf[0]))) {
@@ -14438,8 +14410,7 @@ static JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
             ret_val = JS_NewFloat64(ctx, func.f_f(d1));
         }
             break;
-        case JS_CFUNC_f_f_f:
-        {
+        case JS_CFUNC_f_f_f: {
             double d1, d2;
 
             if (unlikely(JS_ToFloat64(ctx, &d1, arg_buf[0]))) {
@@ -14522,8 +14493,7 @@ typedef enum {
 /* argv[] is modified if (flags & JS_CALL_FLAG_COPY_ARGV) = 0. */
 static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
                                JSValueConst this_obj, JSValueConst new_target,
-                               int argc, JSValue *argv, int flags)
-{
+                               int argc, JSValue *argv, int flags) {
     JSRuntime *rt = caller_ctx->rt;
     JSContext *ctx;
     JSObject *p;
@@ -14536,7 +14506,7 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
     size_t alloca_size;
 
 #if !DIRECT_DISPATCH
-    #define SWITCH(pc)      switch (opcode = *pc++)
+#define SWITCH(pc)      switch (opcode = *pc++)
 #define CASE(op)        case op: if (caller_ctx->rt->debugger_info.transport_close) js_debugger_check(ctx, pc); stub_ ## op
 #define DEFAULT         default
 #define BREAK           break
@@ -14566,12 +14536,15 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
 #define DEFAULT         case_default
 #define BREAK           SWITCH(pc)
 
-    const void * const * active_dispatch_table = caller_ctx->rt->debugger_info.transport_close
-        ? debugger_dispatch_table : dispatch_table;
+    const void* const* active_dispatch_table =
+            caller_ctx->rt->debugger_info.transport_close
+            ? debugger_dispatch_table
+            : dispatch_table;
 #endif
 
     if (js_poll_interrupts(caller_ctx))
         return JS_EXCEPTION;
+
     if (unlikely(JS_VALUE_GET_TAG(func_obj) != JS_TAG_OBJECT)) {
         if (flags & JS_CALL_FLAG_GENERATOR) {
             JSAsyncFunctionState *s = JS_VALUE_GET_PTR(func_obj);
@@ -14598,16 +14571,17 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             goto not_a_function;
         }
     }
+
     p = JS_VALUE_GET_OBJ(func_obj);
     if (unlikely(p->class_id != JS_CLASS_BYTECODE_FUNCTION)) {
-        JSClassCall *call_func;
-        call_func = rt->class_array[p->class_id].call;
+        JSClassCall *call_func = rt->class_array[p->class_id].call;
         if (!call_func) {
-            not_a_function:
+not_a_function:
+            // TODO: add expr/identifier to the message
             return JS_ThrowTypeError(caller_ctx, "not a function");
         }
-        return call_func(caller_ctx, func_obj, this_obj, argc,
-                         (JSValueConst *)argv, flags);
+
+        return call_func(caller_ctx, func_obj, this_obj, argc, (JSValueConst *)argv, flags);
     }
     b = p->u.func.function_bytecode;
 
@@ -14639,11 +14613,12 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             arg_buf[i] = JS_UNDEFINED;
         sf->arg_count = b->arg_count;
     }
+
     var_buf = local_buf + arg_allocated_size;
     sf->var_buf = var_buf;
     sf->arg_buf = arg_buf;
 
-    for(i = 0; i < b->var_count; i++)
+    for (i = 0; i < b->var_count; i++)
         var_buf[i] = JS_UNDEFINED;
 
     stack_buf = var_buf + b->var_count;
@@ -15202,18 +15177,14 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
             BREAK;
 
-            CASE(OP_regexp):
-            {
-                sp[-2] = js_regexp_constructor_internal(ctx, JS_UNDEFINED,
-                                                        sp[-2], sp[-1]);
+            CASE(OP_regexp): {
+                sp[-2] = js_regexp_constructor_internal(ctx, JS_UNDEFINED, sp[-2], sp[-1]);
                 sp--;
             }
             BREAK;
 
-            CASE(OP_get_super):
-            {
-                JSValue proto;
-                proto = JS_GetPrototype(ctx, sp[-1]);
+            CASE(OP_get_super): {
+                JSValue proto = JS_GetPrototype(ctx, sp[-1]);
                 if (JS_IsException(proto))
                     goto exception;
                 JS_FreeValue(ctx, sp[-1]);
@@ -16998,14 +16969,16 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             goto exception;
         }
     }
-    exception:
+
+exception:
     if (is_backtrace_needed(ctx, rt->current_exception)) {
         /* add the backtrace information now (it is not done
-           before if the exception happens in a bytecode
-           operation */
+           before if the exception happens in a bytecode operation */
         sf->cur_pc = pc;
+
         build_backtrace(ctx, rt->current_exception, NULL, 0, 0);
     }
+
     if (!JS_IsUncatchableError(ctx, rt->current_exception)) {
         while (sp > stack_buf) {
             JSValue val = *--sp;
@@ -17026,16 +16999,20 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             }
         }
     }
+
+    // uncaught exception here
+    js_debugger_exception(ctx, rt->current_exception);
+
     ret_val = JS_EXCEPTION;
-    /* the local variables are freed by the caller in the generator
-       case. Hence the label 'done' should never be reached in a
-       generator function. */
+
+    /* The local variables are freed by the caller in the generator case.
+     * Hence the label 'done' should never be reached in a generator function. */
     if (b->func_kind != JS_FUNC_NORMAL) {
-        done_generator:
+done_generator:
         sf->cur_pc = pc;
         sf->cur_sp = sp;
     } else {
-        done:
+done:
         if (unlikely(!List.is_empty(&sf->var_ref_list))) {
             /* variable references reference the stack: must close them */
             close_var_refs(rt, sf);
@@ -17045,36 +17022,33 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             JS_FreeValue(ctx, *pval);
         }
     }
+
     rt->current_stack_frame = sf->prev_frame;
+
     return ret_val;
 }
 
-JSValue JS_Call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj,
-                int argc, JSValueConst *argv)
-{
-    return JS_CallInternal(ctx, func_obj, this_obj, JS_UNDEFINED,
-                           argc, (JSValue *)argv, JS_CALL_FLAG_COPY_ARGV);
+JSValue JS_Call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_obj, int argc, JSValueConst *argv) {
+    return JS_CallInternal(ctx, func_obj, this_obj, JS_UNDEFINED, argc, (JSValue *)argv, JS_CALL_FLAG_COPY_ARGV);
 }
 
-static JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj,
-                           int argc, JSValueConst *argv)
-{
-    JSValue res = JS_CallInternal(ctx, func_obj, this_obj, JS_UNDEFINED,
-                                  argc, (JSValue *)argv, JS_CALL_FLAG_COPY_ARGV);
+static
+JSValue JS_CallFree(JSContext *ctx, JSValue func_obj, JSValueConst this_obj, int argc, JSValueConst *argv) {
+    JSValue res = JS_CallInternal(ctx, func_obj, this_obj, JS_UNDEFINED, argc, (JSValue *)argv, JS_CALL_FLAG_COPY_ARGV);
     JS_FreeValue(ctx, func_obj);
     return res;
 }
 
 /* warning: the refcount of the context is not incremented. Return
    NULL in case of exception (case of revoked proxy only) */
-static JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
-{
-    JSObject *p;
+static
+JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj) {
     JSContext *realm;
 
     if (JS_VALUE_GET_TAG(func_obj) != JS_TAG_OBJECT)
         return ctx;
-    p = JS_VALUE_GET_OBJ(func_obj);
+
+    JSObject* p = JS_VALUE_GET_OBJ(func_obj);
     switch(p->class_id) {
         case JS_CLASS_C_FUNCTION:
             realm = p->u.cfunc.realm;
@@ -17084,8 +17058,7 @@ static JSContext *JS_GetFunctionRealm(JSContext *ctx, JSValueConst func_obj)
         case JS_CLASS_ASYNC_FUNCTION:
         case JS_CLASS_ASYNC_GENERATOR_FUNCTION:
         {
-            JSFunctionBytecode *b;
-            b = p->u.func.function_bytecode;
+            JSFunctionBytecode *b = p->u.func.function_bytecode;
             realm = b->realm;
         }
             break;
@@ -17141,34 +17114,31 @@ static JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor,
 }
 
 /* argv[] is modified if (flags & JS_CALL_FLAG_COPY_ARGV) = 0. */
-static JSValue JS_CallConstructorInternal(JSContext *ctx,
-                                          JSValueConst func_obj,
-                                          JSValueConst new_target,
-                                          int argc, JSValue *argv, int flags)
-{
-    JSObject *p;
-    JSFunctionBytecode *b;
-
+static
+JSValue JS_CallConstructorInternal(JSContext *ctx, JSValueConst func_obj,
+                                   JSValueConst new_target, int argc, JSValue *argv, int flags) {
     if (js_poll_interrupts(ctx))
         return JS_EXCEPTION;
+
     flags |= JS_CALL_FLAG_CONSTRUCTOR;
     if (unlikely(JS_VALUE_GET_TAG(func_obj) != JS_TAG_OBJECT))
         goto not_a_function;
-    p = JS_VALUE_GET_OBJ(func_obj);
+
+    JSObject *p = JS_VALUE_GET_OBJ(func_obj);
     if (unlikely(!p->is_constructor))
         return JS_ThrowTypeError(ctx, "not a constructor");
     if (unlikely(p->class_id != JS_CLASS_BYTECODE_FUNCTION)) {
-        JSClassCall *call_func;
-        call_func = ctx->rt->class_array[p->class_id].call;
+        JSClassCall *call_func = ctx->rt->class_array[p->class_id].call;
+
         if (!call_func) {
-            not_a_function:
+not_a_function:
             return JS_ThrowTypeError(ctx, "not a function");
         }
-        return call_func(ctx, func_obj, new_target, argc,
-                         (JSValueConst *)argv, flags);
+
+        return call_func(ctx, func_obj, new_target, argc, (JSValueConst *)argv, flags);
     }
 
-    b = p->u.func.function_bytecode;
+    JSFunctionBytecode *b = p->u.func.function_bytecode;
     if (b->is_derived_class_constructor) {
         return JS_CallInternal(ctx, func_obj, JS_UNDEFINED, new_target, argc, argv, flags);
     } else {

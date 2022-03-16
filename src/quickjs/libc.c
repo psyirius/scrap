@@ -59,8 +59,10 @@ typedef sig_t sighandler_t;
 #endif
 
 #include "quickjs/utils/cutils.h"
-#include "quickjs/utils/list.h"
-#include "quickjs/utils/cstring.h"
+
+#include "quickjs/std/list.h"
+#include "quickjs/std/cstring.h"
+
 #include "quickjs/libc.h"
 
 #include "quickjs/utils/common.h"
@@ -2993,10 +2995,10 @@ static JSValue js_os_exec(JSContext *ctx, JSValueConst this_val, int argc, JSVal
             ret = my_execvpe(file, (char **)exec_argv, envp);
         else
             ret = execve(file, (char **)exec_argv, envp);
-            
+
         _exit(127);
     }
-    
+
     /* parent */
     if (block_flag) {
         for(;;) {
@@ -3691,22 +3693,18 @@ JSModuleDef *js_init_module_os(JSContext *ctx, const char *module_name) {
 
 /**********************************************************/
 
-static JSValue js_print(JSContext *ctx, JSValueConst this_val,
-                        int argc, JSValueConst *argv) {
-    int i;
-    const char *str;
-    size_t len;
-
-    for (i = 0; i < argc; i++) {
-        if (i != 0)
-            putchar(' ');
-        str = JS_ToCStringLen(ctx, &len, argv[i]);
-        if (!str)
-            return JS_EXCEPTION;
+static
+JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+    for (int i = 0; i < argc; i++) {
+        if (i != 0) putchar(' ');
+        size_t len;
+        const char *str = JS_ToCStringLen(ctx, &len, argv[i]);
+        if (!str) return JS_EXCEPTION;
         fwrite(str, 1, len, stdout);
         JS_FreeCString(ctx, str);
     }
     putchar('\n');
+
     return JS_UNDEFINED;
 }
 

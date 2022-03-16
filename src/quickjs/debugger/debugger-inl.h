@@ -1,8 +1,7 @@
-
 JSDebuggerLocation js_debugger_current_location(JSContext *ctx, const uint8_t *cur_pc) {
-    JSDebuggerLocation location;
-    location.filename = 0;
+    JSDebuggerLocation location = {.filename = 0};
     JSStackFrame *sf = ctx->rt->current_stack_frame;
+
     if (!sf)
         return location;
 
@@ -16,13 +15,14 @@ JSDebuggerLocation js_debugger_current_location(JSContext *ctx, const uint8_t *c
 
     location.line = find_line_num(ctx, b, (cur_pc ? cur_pc : sf->cur_pc) - b->byte_code_buf - 1);
     location.filename = b->debug.filename;
+
     // quickjs has no column info.
     location.column = 0;
     return location;
 }
 
 JSDebuggerInfo *js_debugger_info(JSRuntime *rt) {
-    return &rt->debugger_info;
+    return &(rt->debugger_info);
 }
 
 uint32_t js_debugger_stack_depth(JSContext *ctx) {
@@ -35,15 +35,12 @@ uint32_t js_debugger_stack_depth(JSContext *ctx) {
     return stack_index;
 }
 
-JSValue js_debugger_build_backtrace(JSContext *ctx, const uint8_t *cur_pc)
-{
-    JSStackFrame *sf;
+JSValue js_debugger_build_backtrace(JSContext *ctx, const uint8_t *cur_pc) {
     const char *func_name_str;
-    JSObject *p;
     JSValue ret = JS_NewArray(ctx);
     uint32_t stack_index = 0;
 
-    for(sf = ctx->rt->current_stack_frame; sf != NULL; sf = sf->prev_frame) {
+    for (JSStackFrame *sf = ctx->rt->current_stack_frame; sf != NULL; sf = sf->prev_frame) {
         JSValue current_frame = JS_NewObject(ctx);
 
         uint32_t id = stack_index++;
@@ -56,7 +53,7 @@ JSValue js_debugger_build_backtrace(JSContext *ctx, const uint8_t *cur_pc)
             JS_SetPropertyStr(ctx, current_frame, "name", JS_NewString(ctx, func_name_str));
         JS_FreeCString(ctx, func_name_str);
 
-        p = JS_VALUE_GET_OBJ(sf->cur_func);
+        JSObject *p = JS_VALUE_GET_OBJ(sf->cur_func);
         if (p && js_class_has_bytecode(p->class_id)) {
             JSFunctionBytecode *b;
             int line_num1;
@@ -72,6 +69,7 @@ JSValue js_debugger_build_backtrace(JSContext *ctx, const uint8_t *cur_pc)
         } else {
             JS_SetPropertyStr(ctx, current_frame, "name", JS_NewString(ctx, "(native)"));
         }
+
         JS_SetPropertyUint32(ctx, ret, id, current_frame);
     }
     return ret;
@@ -193,10 +191,10 @@ int js_debugger_check_breakpoint(JSContext *ctx, uint32_t current_dirty, const u
             b->debugger.last_line_num = line_num;
     }
 
-    fail:
+fail:
     JS_FreeValue(ctx, breakpoints);
 
-    done:
+done:
     JS_FreeValue(ctx, path_data);
 
     if (!b->debugger.breakpoints)
@@ -304,9 +302,9 @@ JSValue js_debugger_closure_variables(JSContext *ctx, int stack_index) {
 }
 
 /* debugger needs ability to eval at any stack frame */
-static JSValue js_debugger_eval(JSContext *ctx, JSValueConst this_obj, JSStackFrame *sf,
-                                const char *input, size_t input_len,
-                                const char *filename, int flags, int scope_idx)
+static
+JSValue js_debugger_eval(JSContext *ctx, JSValueConst this_obj, JSStackFrame *sf,
+                         const char *input, size_t input_len, const char *filename, int flags, int scope_idx)
 {
     JSParseState s1, *s = &s1;
     int err, js_mode;

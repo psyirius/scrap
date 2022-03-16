@@ -1,0 +1,65 @@
+{
+  "version": "1.2.0",
+  "domains": {
+    "Schema": {
+      "Types": {
+        "Domain": {
+          "description": "Description of the protocol domain."
+        }
+      }
+    }
+  },
+  "messages": {
+    "runtime": [{
+      "type":"event",
+      "event":{
+        "type": "StoppedEvent",
+        "reason": "entry",
+        "thread": 128
+      }
+    }, {
+      "type":"event",
+      "event": {
+        "type":"StoppedEvent",
+        "reason":"exception",
+        "message":"not a function",
+        "thread": 128
+      }
+    }, {
+      "type":"response",
+      "body": [{
+        "id":0,
+        "name":"<eval>",
+        "filename":"tests/experimental/debugger.js",
+        "line":21
+      }],
+      "request_seq":8
+    }],
+    "client": [{
+      "type":"breakpoints",
+      "breakpoints":{
+        "path":"tests\\experimental\\debugger.js",
+        "breakpoints":[{
+          "line":19,
+          "column":0
+        }]
+      }
+    }, {
+      "type":"stopOnException",
+      "stopOnException": true
+    }, {
+      "type":"continue"
+    }, {
+      "type":"request",
+      "request": {
+        "request_seq": 8,
+        "command": "stackTrace",
+        "args": {
+          "threadId": 128,
+          "startFrame":0,
+          "levels":20
+        }
+      }
+    }]
+  }
+}
