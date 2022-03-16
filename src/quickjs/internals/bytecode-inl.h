@@ -56,7 +56,8 @@ typedef struct BCWriterState {
 } BCWriterState;
 
 #ifdef DUMP_READ_OBJECT
-static const char * const bc_tag_str[] = {
+static
+const char* const bc_tag_str[] = {
     "invalid",
     "null",
     "undefined",
@@ -82,56 +83,52 @@ static const char * const bc_tag_str[] = {
 };
 #endif
 
-static void bc_put_u8(BCWriterState *s, uint8_t v)
-{
+static
+void bc_put_u8(BCWriterState *s, uint8_t v) {
     dbuf_putc(&s->dbuf, v);
 }
 
-static void bc_put_u16(BCWriterState *s, uint16_t v)
-{
-    if (s->byte_swap)
-        v = bswap16(v);
+static
+void bc_put_u16(BCWriterState *s, uint16_t v) {
+    if (s->byte_swap) v = bswap16(v);
     dbuf_put_u16(&s->dbuf, v);
 }
 
-static __maybe_unused void bc_put_u32(BCWriterState *s, uint32_t v)
-{
-    if (s->byte_swap)
-        v = bswap32(v);
+static __maybe_unused
+void bc_put_u32(BCWriterState *s, uint32_t v) {
+    if (s->byte_swap) v = bswap32(v);
     dbuf_put_u32(&s->dbuf, v);
 }
 
-static void bc_put_u64(BCWriterState *s, uint64_t v)
-{
-    if (s->byte_swap)
-        v = bswap64(v);
+static
+void bc_put_u64(BCWriterState *s, uint64_t v) {
+    if (s->byte_swap) v = bswap64(v);
     dbuf_put(&s->dbuf, (uint8_t *)&v, sizeof(v));
 }
 
-static void bc_put_leb128(BCWriterState *s, uint32_t v)
-{
+static
+void bc_put_leb128(BCWriterState *s, uint32_t v) {
     dbuf_put_leb128(&s->dbuf, v);
 }
 
-static void bc_put_sleb128(BCWriterState *s, int32_t v)
-{
+static
+void bc_put_sleb128(BCWriterState *s, int32_t v) {
     dbuf_put_sleb128(&s->dbuf, v);
 }
 
-static void bc_set_flags(uint32_t *pflags, int *pidx, uint32_t val, int n)
-{
+static
+void bc_set_flags(uint32_t *pflags, int *pidx, uint32_t val, int n) {
     *pflags = *pflags | (val << *pidx);
     *pidx += n;
 }
 
-static int bc_atom_to_idx(BCWriterState *s, uint32_t *pres, JSAtom atom)
-{
-    uint32_t v;
-
+static
+int bc_atom_to_idx(BCWriterState *s, uint32_t *pres, JSAtom atom) {
     if (atom < s->first_atom || __JS_AtomIsTaggedInt(atom)) {
         *pres = atom;
         return 0;
     }
+
     atom -= s->first_atom;
     if (atom < s->atom_to_idx_size && s->atom_to_idx[atom] != 0) {
         *pres = s->atom_to_idx[atom];
@@ -141,8 +138,7 @@ static int bc_atom_to_idx(BCWriterState *s, uint32_t *pres, JSAtom atom)
         int old_size, i;
         old_size = s->atom_to_idx_size;
         if (js_resize_array(s->ctx, (void **)&s->atom_to_idx,
-                            sizeof(s->atom_to_idx[0]), &s->atom_to_idx_size,
-                            atom + 1))
+                            sizeof(s->atom_to_idx[0]), &s->atom_to_idx_size, (int) atom + 1))
             return -1;
         /* XXX: could add a specific js_resize_array() function to do it */
         for(i = old_size; i < s->atom_to_idx_size; i++)
@@ -153,41 +149,46 @@ static int bc_atom_to_idx(BCWriterState *s, uint32_t *pres, JSAtom atom)
                         &s->idx_to_atom_size, s->idx_to_atom_count + 1))
         goto fail;
 
-    v = s->idx_to_atom_count++;
+    uint32_t v = s->idx_to_atom_count++;
     s->idx_to_atom[v] = atom + s->first_atom;
     v += s->first_atom;
     s->atom_to_idx[atom] = v;
     *pres = v;
     return 0;
-    fail:
+
+fail:
     *pres = 0;
     return -1;
 }
 
-static int bc_put_atom(BCWriterState *s, JSAtom atom)
-{
+static
+int bc_put_atom(BCWriterState *s, JSAtom atom) {
     uint32_t v;
 
     if (__JS_AtomIsTaggedInt(atom)) {
         v = (__JS_AtomToUInt32(atom) << 1) | 1;
     } else {
-        if (bc_atom_to_idx(s, &v, atom))
+        if (bc_atom_to_idx(s, &v, atom)) {
             return -1;
+        }
+
         v <<= 1;
     }
+
     bc_put_leb128(s, v);
+
     return 0;
 }
 
-static void bc_byte_swap(uint8_t *bc_buf, int bc_len)
-{
-    int pos, len, op, fmt;
+static
+void bc_byte_swap(uint8_t *bc_buf, int bc_len) {
+    int pos = 0;
 
-    pos = 0;
     while (pos < bc_len) {
-        op = bc_buf[pos];
-        len = short_opcode_info(op).size;
-        fmt = short_opcode_info(op).fmt;
+        int op = bc_buf[pos];
+        int len = short_opcode_info(op).size;
+        int fmt = short_opcode_info(op).fmt;
+
         switch(fmt) {
             case OP_FMT_u16:
             case OP_FMT_i16:
@@ -239,33 +240,29 @@ static void bc_byte_swap(uint8_t *bc_buf, int bc_len)
     }
 }
 
-static int JS_WriteFunctionBytecode(BCWriterState *s,
-                                    const uint8_t *bc_buf1, int bc_len)
-{
-    int pos, len, op;
-    JSAtom atom;
-    uint8_t *bc_buf;
-    uint32_t val;
-
-    bc_buf = js_malloc(s->ctx, bc_len);
+static
+int JS_WriteFunctionBytecode(BCWriterState *s, const uint8_t *bc_buf1, int bc_len) {
+    uint8_t * bc_buf = js_malloc(s->ctx, bc_len);
     if (!bc_buf)
         return -1;
     memcpy(bc_buf, bc_buf1, bc_len);
 
-    pos = 0;
+    int pos = 0;
     while (pos < bc_len) {
-        op = bc_buf[pos];
-        len = short_opcode_info(op).size;
+        int op = bc_buf[pos];
+        int len = short_opcode_info(op).size;
         switch(short_opcode_info(op).fmt) {
             case OP_FMT_atom:
             case OP_FMT_atom_u8:
             case OP_FMT_atom_u16:
             case OP_FMT_atom_label_u8:
-            case OP_FMT_atom_label_u16:
-                atom = get_u32(bc_buf + pos + 1);
+            case OP_FMT_atom_label_u16: {
+                JSAtom atom = get_u32(bc_buf + pos + 1);
+                uint32_t val;
                 if (bc_atom_to_idx(s, &val, atom))
                     goto fail;
                 put_u32(bc_buf + pos + 1, val);
+            }
                 break;
             default:
                 break;
@@ -280,17 +277,17 @@ static int JS_WriteFunctionBytecode(BCWriterState *s,
 
     js_free(s->ctx, bc_buf);
     return 0;
-    fail:
+
+fail:
     js_free(s->ctx, bc_buf);
     return -1;
 }
 
-static void JS_WriteString(BCWriterState *s, JSString *p)
-{
-    int i;
+static
+void JS_WriteString(BCWriterState *s, JSString *p) {
     bc_put_leb128(s, ((uint32_t)p->len << 1) | p->is_wide_char);
     if (p->is_wide_char) {
-        for(i = 0; i < p->len; i++)
+        for(uint32_t i = 0; i < p->len; i++)
             bc_put_u16(s, p->u.str16[i]);
     } else {
         dbuf_put(&s->dbuf, p->u.str8, p->len);
@@ -298,16 +295,10 @@ static void JS_WriteString(BCWriterState *s, JSString *p)
 }
 
 #ifdef CONFIG_BIGNUM
-static int JS_WriteBigNum(BCWriterState *s, JSValueConst obj)
-{
-    uint32_t tag, tag1;
-    int64_t e;
+static int JS_WriteBigNum(BCWriterState *s, JSValueConst obj) {
     JSBigFloat *bf = JS_VALUE_GET_PTR(obj);
-    bf_t *a = &bf->num;
-    size_t len, i, n1, j;
-    limb_t v;
 
-    tag = JS_VALUE_GET_TAG(obj);
+    uint32_t tag = JS_VALUE_GET_TAG(obj), tag1;
     switch(tag) {
         case JS_TAG_BIG_INT:
             tag1 = BC_TAG_BIG_INT;
@@ -323,7 +314,9 @@ static int JS_WriteBigNum(BCWriterState *s, JSValueConst obj)
     }
     bc_put_u8(s, tag1);
 
+    bf_t *a = &bf->num;
     /* sign + exponent */
+    int64_t e;
     if (a->expn == BF_EXP_ZERO)
         e = 0;
     else if (a->expn == BF_EXP_INF)
@@ -339,59 +332,55 @@ static int JS_WriteBigNum(BCWriterState *s, JSValueConst obj)
         JS_ThrowInternalError(s->ctx, "bignum exponent is too large");
         return -1;
     }
-    bc_put_sleb128(s, e);
+    bc_put_sleb128(s, (int32_t) e);
 
     /* mantissa */
     if (a->len != 0) {
         if (tag != JS_TAG_BIG_DECIMAL) {
-            i = 0;
+            size_t i = 0;
             while (i < a->len && a->tab[i] == 0)
                 i++;
             assert(i < a->len);
-            v = a->tab[i];
-            n1 = sizeof(limb_t);
+            limb_t v = a->tab[i];
+            size_t n1 = sizeof(limb_t);
             while ((v & 0xff) == 0) {
                 n1--;
                 v >>= 8;
             }
             i++;
-            len = (a->len - i) * sizeof(limb_t) + n1;
+            size_t len = (a->len - i) * sizeof(limb_t) + n1;
             if (len > INT32_MAX) {
                 JS_ThrowInternalError(s->ctx, "bignum is too large");
                 return -1;
             }
             bc_put_leb128(s, len);
             /* always saved in byte based little endian representation */
-            for(j = 0; j < n1; j++) {
+            for(size_t j = 0; j < n1; j++) {
                 dbuf_putc(&s->dbuf, v >> (j * 8));
             }
             for(; i < a->len; i++) {
-                limb_t v = a->tab[i];
+                limb_t vv = a->tab[i];
 #if LIMB_BITS == 32
-                #ifdef WORDS_BIGENDIAN
-                v = bswap32(v);
+#ifdef WORDS_BIGENDIAN
+                vv = bswap32(vv);
 #endif
-                dbuf_put_u32(&s->dbuf, v);
+                dbuf_put_u32(&s->dbuf, vv);
 #else
 #ifdef WORDS_BIGENDIAN
-                v = bswap64(v);
+                vv = bswap64(vv);
 #endif
-                dbuf_put_u64(&s->dbuf, v);
+                dbuf_put_u64(&s->dbuf, vv);
 #endif
             }
         } else {
-            int bpos, d;
-            uint8_t v8;
-            size_t i0;
-
             /* little endian BCD */
-            i = 0;
+            size_t i = 0;
             while (i < a->len && a->tab[i] == 0)
                 i++;
             assert(i < a->len);
-            len = a->len * LIMB_DIGITS;
-            v = a->tab[i];
-            j = 0;
+            size_t len = a->len * LIMB_DIGITS;
+            limb_t v = a->tab[i];
+            size_t j = 0;
             while ((v % 10) == 0) {
                 j++;
                 v /= 10;
@@ -404,28 +393,28 @@ static int JS_WriteBigNum(BCWriterState *s, JSValueConst obj)
             }
             bc_put_leb128(s, len);
 
-            bpos = 0;
-            v8 = 0;
-            i0 = i;
+            int b_pos = 0;
+            uint8_t v8 = 0;
+            size_t i0 = i;
             for(; i < a->len; i++) {
                 if (i != i0) {
                     v = a->tab[i];
                     j = 0;
                 }
                 for(; j < LIMB_DIGITS; j++) {
-                    d = v % 10;
+                    int d = (int) v % 10;
                     v /= 10;
-                    if (bpos == 0) {
+                    if (b_pos == 0) {
                         v8 = d;
-                        bpos = 1;
+                        b_pos = 1;
                     } else {
                         dbuf_putc(&s->dbuf, v8 | (d << 4));
-                        bpos = 0;
+                        b_pos = 0;
                     }
                 }
             }
             /* flush the last digit */
-            if (bpos) {
+            if (b_pos) {
                 dbuf_putc(&s->dbuf, v8);
             }
         }
@@ -434,16 +423,15 @@ static int JS_WriteBigNum(BCWriterState *s, JSValueConst obj)
 }
 #endif /* CONFIG_BIGNUM */
 
-static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj);
+static
+int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj);
 
-static int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj)
-{
+static
+int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj) {
     JSFunctionBytecode *b = JS_VALUE_GET_PTR(obj);
-    uint32_t flags;
-    int idx, i;
-
+    int idx = 0;
+    uint32_t flags = 0;
     bc_put_u8(s, BC_TAG_FUNCTION_BYTECODE);
-    flags = idx = 0;
     bc_set_flags(&flags, &idx, b->has_prototype, 1);
     bc_set_flags(&flags, &idx, b->has_simple_parameter_list, 1);
     bc_set_flags(&flags, &idx, b->is_derived_class_constructor, 1);
@@ -470,7 +458,7 @@ static int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj)
     if (b->vardefs) {
         /* XXX: this field is redundant */
         bc_put_leb128(s, b->arg_count + b->var_count);
-        for(i = 0; i < b->arg_count + b->var_count; i++) {
+        for(int i = 0; i < b->arg_count + b->var_count; i++) {
             JSVarDef *vd = &b->vardefs[i];
             bc_put_atom(s, vd->var_name);
             bc_put_leb128(s, vd->scope_level);
@@ -487,7 +475,7 @@ static int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj)
         bc_put_leb128(s, 0);
     }
 
-    for(i = 0; i < b->closure_var_count; i++) {
+    for (int i = 0; i < b->closure_var_count; i++) {
         JSClosureVar *cv = &b->closure_var[i];
         bc_put_atom(s, cv->var_name);
         bc_put_leb128(s, cv->var_idx);
@@ -511,31 +499,31 @@ static int JS_WriteFunctionTag(BCWriterState *s, JSValueConst obj)
         dbuf_put(&s->dbuf, b->debug.pc2line_buf, b->debug.pc2line_len);
     }
 
-    for(i = 0; i < b->cpool_count; i++) {
+    for (int i = 0; i < b->cpool_count; ++i) {
         if (JS_WriteObjectRec(s, b->cpool[i]))
             goto fail;
     }
     return 0;
-    fail:
+
+fail:
     return -1;
 }
 
-static int JS_WriteModule(BCWriterState *s, JSValueConst obj)
-{
+static
+int JS_WriteModule(BCWriterState *s, JSValueConst obj) {
     JSModuleDef *m = JS_VALUE_GET_PTR(obj);
-    int i;
 
     bc_put_u8(s, BC_TAG_MODULE);
     bc_put_atom(s, m->module_name);
 
     bc_put_leb128(s, m->req_module_entries_count);
-    for(i = 0; i < m->req_module_entries_count; i++) {
+    for(int i = 0; i < m->req_module_entries_count; i++) {
         JSReqModuleEntry *rme = &m->req_module_entries[i];
         bc_put_atom(s, rme->module_name);
     }
 
     bc_put_leb128(s, m->export_entries_count);
-    for(i = 0; i < m->export_entries_count; i++) {
+    for(int i = 0; i < m->export_entries_count; i++) {
         JSExportEntry *me = &m->export_entries[i];
         bc_put_u8(s, me->export_type);
         if (me->export_type == JS_EXPORT_TYPE_LOCAL) {
@@ -548,13 +536,13 @@ static int JS_WriteModule(BCWriterState *s, JSValueConst obj)
     }
 
     bc_put_leb128(s, m->star_export_entries_count);
-    for(i = 0; i < m->star_export_entries_count; i++) {
+    for(int i = 0; i < m->star_export_entries_count; i++) {
         JSStarExportEntry *se = &m->star_export_entries[i];
         bc_put_leb128(s, se->req_module_idx);
     }
 
     bc_put_leb128(s, m->import_entries_count);
-    for(i = 0; i < m->import_entries_count; i++) {
+    for(int i = 0; i < m->import_entries_count; i++) {
         JSImportEntry *mi = &m->import_entries[i];
         bc_put_leb128(s, mi->var_idx);
         bc_put_atom(s, mi->import_name);
@@ -564,16 +552,13 @@ static int JS_WriteModule(BCWriterState *s, JSValueConst obj)
     if (JS_WriteObjectRec(s, m->func_obj))
         goto fail;
     return 0;
-    fail:
+fail:
     return -1;
 }
 
-static int JS_WriteArray(BCWriterState *s, JSValueConst obj)
-{
+static
+int JS_WriteArray(BCWriterState *s, JSValueConst obj) {
     JSObject *p = JS_VALUE_GET_OBJ(obj);
-    uint32_t i, len;
-    JSValue val;
-    int ret;
     BOOL is_template;
 
     if (s->allow_bytecode && !p->extensible) {
@@ -585,11 +570,15 @@ static int JS_WriteArray(BCWriterState *s, JSValueConst obj)
         bc_put_u8(s, BC_TAG_ARRAY);
         is_template = FALSE;
     }
+
+    uint32_t len;
     if (js_get_length32(s->ctx, &len, obj))
         goto fail1;
+
+    int ret;
     bc_put_leb128(s, len);
-    for(i = 0; i < len; i++) {
-        val = JS_GetPropertyUint32(s->ctx, obj, i);
+    for(uint32_t i = 0; i < len; i++) {
+        JSValue val = JS_GetPropertyUint32(s->ctx, obj, i);
         if (JS_IsException(val))
             goto fail1;
         ret = JS_WriteObjectRec(s, val);
@@ -598,7 +587,7 @@ static int JS_WriteArray(BCWriterState *s, JSValueConst obj)
             goto fail1;
     }
     if (is_template) {
-        val = JS_GetProperty(s->ctx, obj, JS_ATOM_raw);
+        JSValue val = JS_GetProperty(s->ctx, obj, JS_ATOM_raw);
         if (JS_IsException(val))
             goto fail1;
         ret = JS_WriteObjectRec(s, val);
@@ -607,30 +596,26 @@ static int JS_WriteArray(BCWriterState *s, JSValueConst obj)
             goto fail1;
     }
     return 0;
-    fail1:
+
+fail1:
     return -1;
 }
 
-static int JS_WriteObjectTag(BCWriterState *s, JSValueConst obj)
-{
+static
+int JS_WriteObjectTag(BCWriterState *s, JSValueConst obj) {
     JSObject *p = JS_VALUE_GET_OBJ(obj);
-    uint32_t i, prop_count;
-    JSShape *sh;
-    JSShapeProperty *pr;
-    int pass;
-    JSAtom atom;
 
     bc_put_u8(s, BC_TAG_OBJECT);
-    prop_count = 0;
-    sh = p->shape;
-    for(pass = 0; pass < 2; pass++) {
+    uint32_t prop_count = 0;
+    JSShape *sh = p->shape;
+    for (int pass = 0; pass < 2; pass++) {
         if (pass == 1)
             bc_put_leb128(s, prop_count);
-        for(i = 0, pr = get_shape_prop(sh); i < sh->prop_count; i++, pr++) {
-            atom = pr->atom;
+        JSShapeProperty *pr = get_shape_prop(sh);
+        for (uint32_t i = 0; i < sh->prop_count; i++, pr++) {
+            JSAtom atom = pr->atom;
             if (atom != JS_ATOM_NULL &&
-                JS_AtomIsString(s->ctx, atom) &&
-                (pr->flags & JS_PROP_ENUMERABLE)) {
+                JS_AtomIsString(s->ctx, atom) && (pr->flags & JS_PROP_ENUMERABLE)) {
                 if (pr->flags & JS_PROP_TMASK) {
                     JS_ThrowTypeError(s->ctx, "only value properties are supported");
                     goto fail;
@@ -646,12 +631,13 @@ static int JS_WriteObjectTag(BCWriterState *s, JSValueConst obj)
         }
     }
     return 0;
-    fail:
+
+fail:
     return -1;
 }
 
-static int JS_WriteTypedArray(BCWriterState *s, JSValueConst obj)
-{
+static
+int JS_WriteTypedArray(BCWriterState *s, JSValueConst obj) {
     JSObject *p = JS_VALUE_GET_OBJ(obj);
     JSTypedArray *ta = p->u.typed_array;
 
@@ -659,27 +645,31 @@ static int JS_WriteTypedArray(BCWriterState *s, JSValueConst obj)
     bc_put_u8(s, p->class_id - JS_CLASS_UINT8C_ARRAY);
     bc_put_leb128(s, p->u.array.count);
     bc_put_leb128(s, ta->offset);
+
     if (JS_WriteObjectRec(s, JS_MKPTR(JS_TAG_OBJECT, ta->buffer)))
         return -1;
+
     return 0;
 }
 
-static int JS_WriteArrayBuffer(BCWriterState *s, JSValueConst obj)
-{
+static
+int JS_WriteArrayBuffer(BCWriterState *s, JSValueConst obj) {
     JSObject *p = JS_VALUE_GET_OBJ(obj);
-    JSArrayBuffer *abuf = p->u.array_buffer;
-    if (abuf->detached) {
+    JSArrayBuffer *arr_buf = p->u.array_buffer;
+
+    if (arr_buf->detached) {
         JS_ThrowTypeErrorDetachedArrayBuffer(s->ctx);
         return -1;
     }
     bc_put_u8(s, BC_TAG_ARRAY_BUFFER);
-    bc_put_leb128(s, abuf->byte_length);
-    dbuf_put(&s->dbuf, abuf->data, abuf->byte_length);
+    bc_put_leb128(s, arr_buf->byte_length);
+    dbuf_put(&s->dbuf, arr_buf->data, arr_buf->byte_length);
+
     return 0;
 }
 
-static int JS_WriteSharedArrayBuffer(BCWriterState *s, JSValueConst obj)
-{
+static
+int JS_WriteSharedArrayBuffer(BCWriterState *s, JSValueConst obj) {
     JSObject *p = JS_VALUE_GET_OBJ(obj);
     JSArrayBuffer *abuf = p->u.array_buffer;
     assert(!abuf->detached); /* SharedArrayBuffer are never detached */
@@ -694,16 +684,14 @@ static int JS_WriteSharedArrayBuffer(BCWriterState *s, JSValueConst obj)
     return 0;
 }
 
-static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj)
-{
-    uint32_t tag;
-
+static
+int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj) {
     if (js_check_stack_overflow(s->ctx->rt, 0)) {
         JS_ThrowStackOverflow(s->ctx);
         return -1;
     }
 
-    tag = JS_VALUE_GET_NORM_TAG(obj);
+    uint32_t tag = JS_VALUE_GET_NORM_TAG(obj);
     switch(tag) {
         case JS_TAG_NULL:
             bc_put_u8(s, BC_TAG_NULL);
@@ -718,16 +706,14 @@ static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj)
             bc_put_u8(s, BC_TAG_INT32);
             bc_put_sleb128(s, JS_VALUE_GET_INT(obj));
             break;
-        case JS_TAG_FLOAT64:
-        {
+        case JS_TAG_FLOAT64: {
             JSFloat64Union u;
             bc_put_u8(s, BC_TAG_FLOAT64);
             u.d = JS_VALUE_GET_FLOAT64(obj);
             bc_put_u64(s, u.u64);
         }
             break;
-        case JS_TAG_STRING:
-        {
+        case JS_TAG_STRING: {
             JSString *p = JS_VALUE_GET_STRING(obj);
             bc_put_u8(s, BC_TAG_STRING);
             JS_WriteString(s, p);
@@ -745,8 +731,7 @@ static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj)
             if (JS_WriteModule(s, obj))
                 goto fail;
             break;
-        case JS_TAG_OBJECT:
-        {
+        case JS_TAG_OBJECT: {
             JSObject *p = JS_VALUE_GET_OBJ(obj);
             int ret, idx;
 
@@ -821,25 +806,23 @@ static int JS_WriteObjectRec(BCWriterState *s, JSValueConst obj)
             break;
 #endif
         default:
-        invalid_tag:
+invalid_tag:
             JS_ThrowInternalError(s->ctx, "unsupported tag (%d)", tag);
             goto fail;
     }
     return 0;
 
-    fail:
+fail:
     return -1;
 }
 
 /* create the atom table */
-static int JS_WriteObjectAtoms(BCWriterState *s)
-{
+static
+int JS_WriteObjectAtoms(BCWriterState *s) {
     JSRuntime *rt = s->ctx->rt;
-    DynBuf dbuf1;
-    int i, atoms_size;
     uint8_t version;
 
-    dbuf1 = s->dbuf;
+    DynBuf dbf = s->dbuf;
     js_dbuf_init(s->ctx, &s->dbuf);
 
     version = BC_VERSION;
@@ -848,7 +831,7 @@ static int JS_WriteObjectAtoms(BCWriterState *s)
     bc_put_u8(s, version);
 
     bc_put_leb128(s, s->idx_to_atom_count);
-    for(i = 0; i < s->idx_to_atom_count; i++) {
+    for (int i = 0; i < s->idx_to_atom_count; i++) {
         JSAtomStruct *p = rt->atom_array[s->idx_to_atom[i]];
         JS_WriteString(s, p);
     }
@@ -857,23 +840,23 @@ static int JS_WriteObjectAtoms(BCWriterState *s)
     /* move the atoms at the start */
     /* XXX: could just append dbuf1 data, but it uses more memory if
        dbuf1 is larger than dbuf */
-    atoms_size = s->dbuf.size;
-    if (dbuf_realloc(&dbuf1, dbuf1.size + atoms_size))
+    size_t atoms_size = s->dbuf.size;
+    if (dbuf_realloc(&dbf, dbf.size + atoms_size))
         goto fail;
-    memmove(dbuf1.buf + atoms_size, dbuf1.buf, dbuf1.size);
-    memcpy(dbuf1.buf, s->dbuf.buf, atoms_size);
-    dbuf1.size += atoms_size;
+    memmove(dbf.buf + atoms_size, dbf.buf, dbf.size);
+    memcpy(dbf.buf, s->dbuf.buf, atoms_size);
+    dbf.size += atoms_size;
     dbuf_free(&s->dbuf);
-    s->dbuf = dbuf1;
+    s->dbuf = dbf;
     return 0;
-    fail:
-    dbuf_free(&dbuf1);
+
+fail:
+    dbuf_free(&dbf);
     return -1;
 }
 
 uint8_t *JS_WriteObject2(JSContext *ctx, size_t *psize, JSValueConst obj,
-                         int flags, uint8_t ***psab_tab, size_t *psab_tab_len)
-{
+                         int flags, uint8_t ***psab_tab, size_t *psab_tab_len) {
     BCWriterState ss, *s = &ss;
 
     memset(s, 0, sizeof(*s));
@@ -904,7 +887,7 @@ uint8_t *JS_WriteObject2(JSContext *ctx, size_t *psize, JSValueConst obj,
     if (psab_tab_len)
         *psab_tab_len = s->sab_tab_len;
     return s->dbuf.buf;
-    fail:
+fail:
     js_object_list_end(ctx, &s->object_list);
     js_free(ctx, s->atom_to_idx);
     js_free(ctx, s->idx_to_atom);
@@ -917,9 +900,7 @@ uint8_t *JS_WriteObject2(JSContext *ctx, size_t *psize, JSValueConst obj,
     return NULL;
 }
 
-uint8_t *JS_WriteObject(JSContext *ctx, size_t *psize, JSValueConst obj,
-                        int flags)
-{
+uint8_t *JS_WriteObject(JSContext *ctx, size_t *psize, JSValueConst obj, int flags) {
     return JS_WriteObject2(ctx, psize, obj, flags, NULL, NULL);
 }
 
@@ -980,16 +961,17 @@ static void __attribute__((format(printf, 2, 3))) bc_read_trace(BCReaderState *s
 #define bc_read_trace(...)
 #endif
 
-static int bc_read_error_end(BCReaderState *s)
-{
+static
+int bc_read_error_end(BCReaderState *s) {
     if (!s->error_state) {
         JS_ThrowSyntaxError(s->ctx, "read after the end of the buffer");
     }
+
     return s->error_state = -1;
 }
 
-static int bc_get_u8(BCReaderState *s, uint8_t *pval)
-{
+static
+int bc_get_u8(BCReaderState *s, uint8_t *pval) {
     if (unlikely(s->buf_end - s->ptr < 1)) {
         *pval = 0; /* avoid warning */
         return bc_read_error_end(s);
@@ -998,8 +980,8 @@ static int bc_get_u8(BCReaderState *s, uint8_t *pval)
     return 0;
 }
 
-static int bc_get_u16(BCReaderState *s, uint16_t *pval)
-{
+static
+int bc_get_u16(BCReaderState *s, uint16_t *pval) {
     if (unlikely(s->buf_end - s->ptr < 2)) {
         *pval = 0; /* avoid warning */
         return bc_read_error_end(s);
@@ -1009,8 +991,8 @@ static int bc_get_u16(BCReaderState *s, uint16_t *pval)
     return 0;
 }
 
-static __maybe_unused int bc_get_u32(BCReaderState *s, uint32_t *pval)
-{
+static __maybe_unused
+int bc_get_u32(BCReaderState *s, uint32_t *pval) {
     if (unlikely(s->buf_end - s->ptr < 4)) {
         *pval = 0; /* avoid warning */
         return bc_read_error_end(s);
@@ -1020,8 +1002,8 @@ static __maybe_unused int bc_get_u32(BCReaderState *s, uint32_t *pval)
     return 0;
 }
 
-static int bc_get_u64(BCReaderState *s, uint64_t *pval)
-{
+static
+int bc_get_u64(BCReaderState *s, uint64_t *pval) {
     if (unlikely(s->buf_end - s->ptr < 8)) {
         *pval = 0; /* avoid warning */
         return bc_read_error_end(s);
@@ -1031,8 +1013,8 @@ static int bc_get_u64(BCReaderState *s, uint64_t *pval)
     return 0;
 }
 
-static int bc_get_leb128(BCReaderState *s, uint32_t *pval)
-{
+static
+int bc_get_leb128(BCReaderState *s, uint32_t *pval) {
     int ret;
     ret = get_leb128(pval, s->ptr, s->buf_end);
     if (unlikely(ret < 0))
@@ -1041,8 +1023,8 @@ static int bc_get_leb128(BCReaderState *s, uint32_t *pval)
     return 0;
 }
 
-static int bc_get_sleb128(BCReaderState *s, int32_t *pval)
-{
+static
+int bc_get_sleb128(BCReaderState *s, int32_t *pval) {
     int ret;
     ret = get_sleb128(pval, s->ptr, s->buf_end);
     if (unlikely(ret < 0))
@@ -1052,13 +1034,13 @@ static int bc_get_sleb128(BCReaderState *s, int32_t *pval)
 }
 
 /* XXX: used to read an `int` with a positive value */
-static int bc_get_leb128_int(BCReaderState *s, int *pval)
-{
+static
+int bc_get_leb128_int(BCReaderState *s, int *pval) {
     return bc_get_leb128(s, (uint32_t *)pval);
 }
 
-static int bc_get_leb128_u16(BCReaderState *s, uint16_t *pval)
-{
+static
+int bc_get_leb128_u16(BCReaderState *s, uint16_t *pval) {
     uint32_t val;
     if (bc_get_leb128(s, &val)) {
         *pval = 0;
@@ -1068,8 +1050,8 @@ static int bc_get_leb128_u16(BCReaderState *s, uint16_t *pval)
     return 0;
 }
 
-static int bc_get_buf(BCReaderState *s, uint8_t *buf, uint32_t buf_len)
-{
+static
+int bc_get_buf(BCReaderState *s, uint8_t *buf, uint32_t buf_len) {
     if (buf_len != 0) {
         if (unlikely(!buf || s->buf_end - s->ptr < buf_len))
             return bc_read_error_end(s);
@@ -1079,8 +1061,8 @@ static int bc_get_buf(BCReaderState *s, uint8_t *buf, uint32_t buf_len)
     return 0;
 }
 
-static int bc_idx_to_atom(BCReaderState *s, JSAtom *patom, uint32_t idx)
-{
+static
+int bc_idx_to_atom(BCReaderState *s, JSAtom *patom, uint32_t idx) {
     JSAtom atom;
 
     if (__JS_AtomIsTaggedInt(idx)) {
@@ -1101,8 +1083,8 @@ static int bc_idx_to_atom(BCReaderState *s, JSAtom *patom, uint32_t idx)
     return 0;
 }
 
-static int bc_get_atom(BCReaderState *s, JSAtom *patom)
-{
+static
+int bc_get_atom(BCReaderState *s, JSAtom *patom) {
     uint32_t v;
     if (bc_get_leb128(s, &v))
         return -1;
@@ -1114,23 +1096,19 @@ static int bc_get_atom(BCReaderState *s, JSAtom *patom)
     }
 }
 
-static JSString *JS_ReadString(BCReaderState *s)
-{
+static
+JSString *JS_ReadString(BCReaderState *s) {
     uint32_t len;
-    size_t size;
-    BOOL is_wide_char;
-    JSString *p;
-
     if (bc_get_leb128(s, &len))
         return NULL;
-    is_wide_char = len & 1;
+    BOOL is_wide_char = (BOOL) (len & 1);
     len >>= 1;
-    p = js_alloc_string(s->ctx, len, is_wide_char);
+    JSString *p = js_alloc_string(s->ctx, (int) len, is_wide_char);
     if (!p) {
         s->error_state = -1;
         return NULL;
     }
-    size = (size_t)len << is_wide_char;
+    size_t size = (size_t)len << is_wide_char;
     if ((s->buf_end - s->ptr) < size) {
         bc_read_error_end(s);
         js_free_string(s->ctx->rt, p);
@@ -1147,18 +1125,16 @@ static JSString *JS_ReadString(BCReaderState *s)
     return p;
 }
 
-static uint32_t bc_get_flags(uint32_t flags, int *pidx, int n)
-{
-    uint32_t val;
+static
+uint32_t bc_get_flags(uint32_t flags, int *pidx, int n) {
     /* XXX: this does not work for n == 32 */
-    val = (flags >> *pidx) & ((1U << n) - 1);
+    uint32_t val = (flags >> *pidx) & ((1U << n) - 1);
     *pidx += n;
     return val;
 }
 
-static int JS_ReadFunctionBytecode(BCReaderState *s, JSFunctionBytecode *b,
-                                   int byte_code_offset, uint32_t bc_len)
-{
+static
+int JS_ReadFunctionBytecode(BCReaderState *s, JSFunctionBytecode *b, int byte_code_offset, uint32_t bc_len) {
     uint8_t *bc_buf;
     int pos, len, op;
     JSAtom atom;
@@ -1175,6 +1151,7 @@ static int JS_ReadFunctionBytecode(BCReaderState *s, JSFunctionBytecode *b,
         if (bc_get_buf(s, bc_buf, bc_len))
             return -1;
     }
+
     b->byte_code_buf = bc_buf;
 
     pos = 0;
@@ -1212,8 +1189,8 @@ static int JS_ReadFunctionBytecode(BCReaderState *s, JSFunctionBytecode *b,
 }
 
 #ifdef CONFIG_BIGNUM
-static JSValue JS_ReadBigNum(BCReaderState *s, int tag)
-{
+static
+JSValue JS_ReadBigNum(BCReaderState *s, int tag) {
     JSValue obj = JS_UNDEFINED;
     uint8_t v8;
     int32_t e;
@@ -1345,27 +1322,26 @@ static JSValue JS_ReadBigNum(BCReaderState *s, int tag)
 }
 #endif /* CONFIG_BIGNUM */
 
-static JSValue JS_ReadObjectRec(BCReaderState *s);
+static
+JSValue JS_ReadObjectRec(BCReaderState *s);
 
-static int BC_add_object_ref1(BCReaderState *s, JSObject *p)
-{
+static
+int BC_add_object_ref1(BCReaderState *s, JSObject *p) {
     if (s->allow_reference) {
-        if (js_resize_array(s->ctx, (void *)&s->objects,
-                            sizeof(s->objects[0]),
-                            &s->objects_size, s->objects_count + 1))
+        if (js_resize_array(s->ctx, (void *)&s->objects, sizeof(s->objects[0]), &s->objects_size, s->objects_count + 1))
             return -1;
         s->objects[s->objects_count++] = p;
     }
     return 0;
 }
 
-static int BC_add_object_ref(BCReaderState *s, JSValueConst obj)
-{
+static
+int BC_add_object_ref(BCReaderState *s, JSValueConst obj) {
     return BC_add_object_ref1(s, JS_VALUE_GET_OBJ(obj));
 }
 
-static JSValue JS_ReadFunctionTag(BCReaderState *s)
-{
+static
+JSValue JS_ReadFunctionTag(BCReaderState *s) {
     JSContext *ctx = s->ctx;
     JSFunctionBytecode bc, *b;
     JSValue obj = JS_UNDEFINED;
@@ -1554,8 +1530,8 @@ static JSValue JS_ReadFunctionTag(BCReaderState *s)
     return JS_EXCEPTION;
 }
 
-static JSValue JS_ReadModule(BCReaderState *s)
-{
+static
+JSValue JS_ReadModule(BCReaderState *s) {
     JSContext *ctx = s->ctx;
     JSValue obj;
     JSModuleDef *m = NULL;
@@ -1655,8 +1631,8 @@ static JSValue JS_ReadModule(BCReaderState *s)
     return JS_EXCEPTION;
 }
 
-static JSValue JS_ReadObjectTag(BCReaderState *s)
-{
+static
+JSValue JS_ReadObjectTag(BCReaderState *s) {
     JSContext *ctx = s->ctx;
     JSValue obj;
     uint32_t prop_count, i;
@@ -1691,8 +1667,8 @@ static JSValue JS_ReadObjectTag(BCReaderState *s)
     return JS_EXCEPTION;
 }
 
-static JSValue JS_ReadArray(BCReaderState *s, int tag)
-{
+static
+JSValue JS_ReadArray(BCReaderState *s, int tag) {
     JSContext *ctx = s->ctx;
     JSValue obj;
     uint32_t len, i;
@@ -1736,8 +1712,8 @@ static JSValue JS_ReadArray(BCReaderState *s, int tag)
     return JS_EXCEPTION;
 }
 
-static JSValue JS_ReadTypedArray(BCReaderState *s)
-{
+static
+JSValue JS_ReadTypedArray(BCReaderState *s) {
     JSContext *ctx = s->ctx;
     JSValue obj = JS_UNDEFINED, array_buffer = JS_UNDEFINED;
     uint8_t array_tag;
@@ -1783,8 +1759,8 @@ static JSValue JS_ReadTypedArray(BCReaderState *s)
     return JS_EXCEPTION;
 }
 
-static JSValue JS_ReadArrayBuffer(BCReaderState *s)
-{
+static
+JSValue JS_ReadArrayBuffer(BCReaderState *s) {
     JSContext *ctx = s->ctx;
     uint32_t byte_length;
     JSValue obj;
@@ -1807,8 +1783,8 @@ static JSValue JS_ReadArrayBuffer(BCReaderState *s)
     return JS_EXCEPTION;
 }
 
-static JSValue JS_ReadSharedArrayBuffer(BCReaderState *s)
-{
+static
+JSValue JS_ReadSharedArrayBuffer(BCReaderState *s) {
     JSContext *ctx = s->ctx;
     uint32_t byte_length;
     uint8_t *data_ptr;
@@ -1821,10 +1797,8 @@ static JSValue JS_ReadSharedArrayBuffer(BCReaderState *s)
         return JS_EXCEPTION;
     data_ptr = (uint8_t *)(uintptr_t)u64;
     /* the SharedArrayBuffer is cloned */
-    obj = js_array_buffer_constructor3(ctx, JS_UNDEFINED, byte_length,
-                                       JS_CLASS_SHARED_ARRAY_BUFFER,
-                                       data_ptr,
-                                       NULL, NULL, FALSE);
+    obj = js_array_buffer_constructor3(
+            ctx, JS_UNDEFINED, byte_length, JS_CLASS_SHARED_ARRAY_BUFFER, data_ptr, NULL, NULL, FALSE);
     if (JS_IsException(obj))
         goto fail;
     if (BC_add_object_ref(s, obj))
@@ -1835,8 +1809,8 @@ static JSValue JS_ReadSharedArrayBuffer(BCReaderState *s)
     return JS_EXCEPTION;
 }
 
-static JSValue JS_ReadDate(BCReaderState *s)
-{
+static
+JSValue JS_ReadDate(BCReaderState *s) {
     JSContext *ctx = s->ctx;
     JSValue val, obj = JS_UNDEFINED;
 
@@ -1861,8 +1835,8 @@ static JSValue JS_ReadDate(BCReaderState *s)
     return JS_EXCEPTION;
 }
 
-static JSValue JS_ReadObjectValue(BCReaderState *s)
-{
+static
+JSValue JS_ReadObjectValue(BCReaderState *s) {
     JSContext *ctx = s->ctx;
     JSValue val, obj = JS_UNDEFINED;
 
@@ -1882,8 +1856,8 @@ static JSValue JS_ReadObjectValue(BCReaderState *s)
     return JS_EXCEPTION;
 }
 
-static JSValue JS_ReadObjectRec(BCReaderState *s)
-{
+static
+JSValue JS_ReadObjectRec(BCReaderState *s) {
     JSContext *ctx = s->ctx;
     uint8_t tag;
     JSValue obj = JS_UNDEFINED;
@@ -1992,15 +1966,14 @@ static JSValue JS_ReadObjectRec(BCReaderState *s)
             break;
         default:
         invalid_tag:
-            return JS_ThrowSyntaxError(ctx, "invalid tag (tag=%d pos=%u)",
-                                       tag, (unsigned int)(s->ptr - s->buf_start));
+            return JS_ThrowSyntaxError(ctx, "invalid tag (tag=%d pos=%u)", tag, (unsigned int)(s->ptr - s->buf_start));
     }
     bc_read_trace(s, "}\n");
     return obj;
 }
 
-static int JS_ReadObjectAtoms(BCReaderState *s)
-{
+static
+int JS_ReadObjectAtoms(BCReaderState *s) {
     uint8_t v8;
     JSString *p;
     int i;
@@ -2010,8 +1983,7 @@ static int JS_ReadObjectAtoms(BCReaderState *s)
         return -1;
     /* XXX: could support byte swapped input */
     if (v8 != BC_VERSION) {
-        JS_ThrowSyntaxError(s->ctx, "invalid version (%d expected=%d)",
-                            v8, BC_VERSION);
+        JS_ThrowSyntaxError(s->ctx, "invalid version (%d expected=%d)", v8, BC_VERSION);
         return -1;
     }
     if (bc_get_leb128(s, &s->idx_to_atom_count))

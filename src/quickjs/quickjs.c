@@ -561,8 +561,7 @@ typedef enum {
     JS_VAR_PRIVATE_GETTER_SETTER, /* must come after JS_VAR_PRIVATE_SETTER */
 } JSVarKindEnum;
 
-/* XXX: could use a different structure in bytecode functions to save
-   memory */
+/* XXX: could use a different structure in bytecode functions to save memory */
 typedef struct JSVarDef {
     JSAtom var_name;
     /* index into fd->scopes of this variable lexical scope */

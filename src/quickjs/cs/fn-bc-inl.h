@@ -25,8 +25,7 @@ void print_lines(const char *source, int line, int line1) {
     }
 }
 
-static void dump_byte_code(JSContext *ctx, int pass,
-                           const uint8_t *tab, int len,
+static void dump_byte_code(JSContext *ctx, int pass, const uint8_t *tab, int len,
                            const JSVarDef *args, int arg_count,
                            const JSVarDef *vars, int var_count,
                            const JSClosureVar *closure_var, int closure_var_count,

@@ -6,7 +6,7 @@
 
 #include "quickjs/quickjs.h"
 #include "quickjs/libc.h"
-#include "quickjs/utils/cstring.h"
+#include "quickjs/std/cstring.h"
 
 // repl.js compiled
 #include "lib/repl.h"

@@ -25,6 +25,7 @@ JSValue JS_EvalFunctionInternal(JSContext *ctx, JSValue fun_obj, JSValueConst th
         JS_FreeValue(ctx, fun_obj);
         ret_val = JS_ThrowTypeError(ctx, "bytecode function expected");
     }
+
     return ret_val;
 }
 
@@ -34,8 +35,7 @@ JSValue JS_EvalFunction(JSContext *ctx, JSValue fun_obj) {
 
 /* 'input' must be zero terminated i.e. input[input_len] = '\0'. */
 static
-JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
-                          const char *input, size_t input_len,
+JSValue cb_JS_EvalInternal(JSContext *ctx, JSValueConst this_obj, const char *input, size_t input_len,
                           const char *filename, int flags, int scope_idx) {
     JSParseState s1, *s = &s1;
     int err, js_mode, eval_type;
@@ -101,8 +101,9 @@ JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
     fd->js_mode = js_mode;
     fd->func_name = JS_DupAtom(ctx, JS_ATOM__eval_);
     if (b) {
-        if (add_closure_variables(ctx, fd, b, scope_idx))
+        if (add_closure_variables(ctx, fd, b, scope_idx)) {
             goto fail;
+        }
     }
     fd->module = m;
     s->is_module = (m != NULL);
@@ -113,7 +114,7 @@ JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
 
     err = js_parse_program(s);
     if (err) {
-        fail:
+fail:
         free_token(s, &s->token);
         js_free_function_def(ctx, fd);
         goto fail1;
@@ -138,20 +139,20 @@ JSValue __JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
 
     return ret_val;
 
-    fail1:
+fail1:
     /* XXX: should free all the unresolved dependencies */
     if (m) js_free_module_def(ctx, m);
+
     return JS_EXCEPTION;
 }
 
 void JS_AddIntrinsicEval(JSContext *ctx) {
-    ctx->eval_internal = __JS_EvalInternal;
+    ctx->eval_internal = cb_JS_EvalInternal;
 }
 
 /* the indirection is needed to make 'eval' optional */
 static
-JSValue JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
-                        const char *input, size_t input_len,
+JSValue JS_EvalInternal(JSContext *ctx, JSValueConst this_obj, const char *input, size_t input_len,
                         const char *filename, int flags, int scope_idx) {
     if (unlikely(!ctx->eval_internal)) {
         return JS_ThrowTypeError(ctx, "eval is not supported");
@@ -162,31 +163,27 @@ JSValue JS_EvalInternal(JSContext *ctx, JSValueConst this_obj,
 
 static
 JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj, JSValueConst val, int flags, int scope_idx) {
-    JSValue ret;
-    const char *str;
-    size_t len;
-
     if (!JS_IsString(val))
         return JS_DupValue(ctx, val);
-    str = JS_ToCStringLen(ctx, &len, val);
+
+    size_t len;
+    const char *str = JS_ToCStringLen(ctx, &len, val);
     if (!str)
         return JS_EXCEPTION;
-    ret = JS_EvalInternal(ctx, this_obj, str, len, "<input>", flags, scope_idx);
+    JSValue ret = JS_EvalInternal(ctx, this_obj, str, len, "<input>", flags, scope_idx);
     JS_FreeCString(ctx, str);
     return ret;
 
 }
 
-JSValue JS_EvalThis(JSContext *ctx, JSValueConst this_obj,
-                    const char *input, size_t input_len,
+JSValue JS_EvalThis(JSContext *ctx, JSValueConst this_obj, const char *input, size_t input_len,
                     const char *filename, int eval_flags) {
-    DBG_EXPR(int eval_type = eval_flags & JS_EVAL_TYPE_MASK);
-    assert(eval_type == JS_EVAL_TYPE_GLOBAL ||
-           eval_type == JS_EVAL_TYPE_MODULE);
 
-    JSValue ret = JS_EvalInternal(ctx, this_obj, input, input_len, filename,
-                                  eval_flags, -1);
-    return ret;
+    DBG_EXPR(int eval_type = eval_flags & JS_EVAL_TYPE_MASK);
+
+    assert((eval_type == JS_EVAL_TYPE_GLOBAL) || (eval_type == JS_EVAL_TYPE_MODULE));
+
+    return JS_EvalInternal(ctx, this_obj, input, input_len, filename, eval_flags, -1);
 }
 
 JSValue JS_Eval(JSContext *ctx, const char *input, size_t input_len, const char *filename, int eval_flags) {

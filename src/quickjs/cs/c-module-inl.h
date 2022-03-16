@@ -1,7 +1,5 @@
-/* create a C module */
-JSModuleDef *JS_NewCModule(JSContext *ctx, const char *name_str,
-                           JSModuleInitFunc *func)
-{
+/* C module APIs */
+JSModuleDef *JS_NewCModule(JSContext *ctx, const char *name_str, JSModuleInitFunc *func) {
     JSModuleDef *m;
     JSAtom name;
     name = JS_NewAtom(ctx, name_str);
@@ -12,8 +10,7 @@ JSModuleDef *JS_NewCModule(JSContext *ctx, const char *name_str,
     return m;
 }
 
-int JS_AddModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name)
-{
+int JS_AddModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name) {
     JSExportEntry *me;
     JSAtom name;
     name = JS_NewAtom(ctx, export_name);
@@ -28,9 +25,7 @@ int JS_AddModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name)
         return 0;
 }
 
-int JS_SetModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name,
-                       JSValue val)
-{
+int JS_SetModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name, JSValue val) {
     JSExportEntry *me;
     JSAtom name;
     name = JS_NewAtom(ctx, export_name);
@@ -47,10 +42,8 @@ int JS_SetModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name,
     return -1;
 }
 
-void JS_SetModuleLoaderFunc(JSRuntime *rt,
-                            JSModuleNormalizeFunc *module_normalize,
-                            JSModuleLoaderFunc *module_loader, void *opaque)
-{
+void JS_SetModuleLoaderFunc(JSRuntime *rt, JSModuleNormalizeFunc *module_normalize,
+                            JSModuleLoaderFunc *module_loader, void *opaque) {
     rt->module_normalize_func = module_normalize;
     rt->module_loader_func = module_loader;
     rt->module_loader_opaque = opaque;

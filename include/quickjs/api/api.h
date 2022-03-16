@@ -1,7 +1,5 @@
 /* QuickJs Engine - Internal API */
 #pragma once
 
-void $QJS_() {
-
-}
+void JS_Object_New();
 
