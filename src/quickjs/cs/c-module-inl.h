@@ -35,7 +35,7 @@ int JS_SetModuleExport(JSContext *ctx, JSModuleDef *m, const char *export_name, 
     JS_FreeAtom(ctx, name);
     if (!me)
         goto fail;
-    set_value(ctx, me->u.local.var_ref->pvalue, val);
+    js_set_value(ctx, me->u.local.var_ref->pvalue, val);
     return 0;
     fail:
     JS_FreeValue(ctx, val);

@@ -36,15 +36,15 @@ static int JS_CopySubArray(JSContext *ctx,
                 l = min_int64(l, from + 1);
                 l = min_int64(l, to + 1);
                 for(j = 0; j < l; j++) {
-                    set_value(ctx, &p->u.array.u.values[to - j],
-                              JS_DupValue(ctx, p->u.array.u.values[from - j]));
+                    js_set_value(ctx, &p->u.array.u.values[to - j],
+                                 JS_DupValue(ctx, p->u.array.u.values[from - j]));
                 }
             } else {
                 l = min_int64(l, len - from);
                 l = min_int64(l, len - to);
                 for(j = 0; j < l; j++) {
-                    set_value(ctx, &p->u.array.u.values[to + j],
-                              JS_DupValue(ctx, p->u.array.u.values[from + j]));
+                    js_set_value(ctx, &p->u.array.u.values[to + j],
+                                 JS_DupValue(ctx, p->u.array.u.values[from + j]));
                 }
             }
             i += l;

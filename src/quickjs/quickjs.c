@@ -234,6 +234,7 @@ typedef enum {
 typedef enum OPCodeEnum OPCodeEnum;
 
 #ifdef CONFIG_BIGNUM
+
 /* function pointers are used for numeric operations so that it is possible to remove some numeric types */
 typedef struct {
     JSValue (*to_string)(JSContext *ctx, JSValueConst val);
@@ -973,7 +974,7 @@ struct JSObject {
 enum {
     __JS_ATOM_NULL = JS_ATOM_NULL,
 #define DEF(name, str) JS_ATOM_ ## name,
-#include "quickjs/quickjs-atom.h"
+#include "./internal/atom-def.h"
 #undef DEF
     JS_ATOM_END,
 };
@@ -982,14 +983,14 @@ enum {
 
 static const char js_atom_init[] =
 #define DEF(name, str) str "\0"
-#include "quickjs/quickjs-atom.h"
+#include "./internal/atom-def.h"
 #undef DEF
 ;
 
 typedef enum OPCodeFormat {
 #define FMT(f) OP_FMT_ ## f,
 #define DEF(id, size, n_pop, n_push, f)
-#include "quickjs/quickjs-opcode.h"
+#include "./internal/opcode-def.h"
 #undef DEF
 #undef FMT
 } OPCodeFormat;
@@ -998,7 +999,7 @@ enum OPCodeEnum {
 #define FMT(f)
 #define DEF(id, size, n_pop, n_push, f) OP_ ## id,
 #define def(id, size, n_pop, n_push, f)
-#include "quickjs/quickjs-opcode.h"
+#include "./internal/opcode-def.h"
 #undef def
 #undef DEF
 #undef FMT
@@ -1009,7 +1010,7 @@ enum OPCodeEnum {
 #define FMT(f)
 #define DEF(id, size, n_pop, n_push, f)
 #define def(id, size, n_pop, n_push, f) OP_ ## id,
-#include "quickjs/quickjs-opcode.h"
+#include "./internal/opcode-def.h"
 #undef def
 #undef DEF
 #undef FMT

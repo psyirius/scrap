@@ -1,3 +1,6 @@
+ExtendWith:
+- async: libuv
+
 TODO-Debugger:
 - exception protocol schema.
 - breakpoints.

@@ -402,10 +402,6 @@ typedef JSValue JSCFunctionData(JSContext *ctx, JSValueConst this_val, int argc,
                                 JSValue *func_data);
 
 typedef struct {
-    char data[64];
-} JSRuntimeThreadState;
-
-typedef struct {
     size_t malloc_count;
     size_t malloc_size;
     size_t malloc_limit;
@@ -425,6 +421,10 @@ typedef struct JSMallocFunctions {
 typedef struct JSGCObjectHeader JSGCObjectHeader;
 
 JSRuntime *JS_NewRuntime(void);
+
+typedef struct {
+    char data[64];
+} JSRuntimeThreadState;
 
 void JS_Enter(JSRuntime *rt);
 void JS_Suspend(JSRuntime *rt, JSRuntimeThreadState *state);
@@ -477,6 +477,7 @@ typedef struct {
     JSValue (*get)(JSContext *ctx, JSAtom name, void *opaque);
     void *opaque;
 } JSGlobalAccessFunctions;
+
 void JS_SetGlobalAccessFunctions(JSContext *ctx, const JSGlobalAccessFunctions *af);
 
 void JS_SetClassProto(JSContext *ctx, JSClassID class_id, JSValue obj);
@@ -521,8 +522,7 @@ void JS_AddIntrinsicOperators(JSContext *ctx);
 /* enable "use math" */
 void JS_EnableBignumExt(JSContext *ctx, JS_BOOL enable);
 
-JSValue js_string_codePointRange(JSContext *ctx, JSValueConst this_val,
-                                 int argc, JSValueConst *argv);
+JSValue js_string_codePointRange(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
 
 void *js_malloc_rt(JSRuntime *rt, size_t size);
 
@@ -644,8 +644,7 @@ typedef struct JSClassExoticMethods {
 
 typedef void JSClassFinalizer(JSRuntime *rt, JSValue val);
 
-typedef void JSClassGCMark(JSRuntime *rt, JSValueConst val,
-                           JS_MarkFunc *mark_func);
+typedef void JSClassGCMark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
 
 #define JS_CALL_FLAG_CONSTRUCTOR (1 << 0)
 
@@ -676,11 +675,13 @@ int JS_IsRegisteredClass(JSRuntime *rt, JSClassID class_id);
 
 /* value handling */
 
-static js_force_inline JSValue JS_NewBool(JSContext *ctx, JS_BOOL val) {
+static js_force_inline
+JSValue JS_NewBool(JSContext *ctx, JS_BOOL val) {
     return JS_MKVAL(JS_TAG_BOOL, (val != 0));
 }
 
-static js_force_inline JSValue JS_NewInt32(JSContext *ctx, int32_t val) {
+static js_force_inline
+JSValue JS_NewInt32(JSContext *ctx, int32_t val) {
     return JS_MKVAL(JS_TAG_INT, val);
 }
 
@@ -849,7 +850,8 @@ static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v) {
 int JS_ToBool(JSContext *ctx, JSValueConst val); /* return -1 for JS_EXCEPTION */
 int JS_ToInt32(JSContext *ctx, int32_t *pres, JSValueConst val);
 
-static inline int JS_ToUint32(JSContext *ctx, uint32_t *pres, JSValueConst val) {
+static inline
+int JS_ToUint32(JSContext *ctx, uint32_t *pres, JSValueConst val) {
     return JS_ToInt32(ctx, (int32_t *) pres, val);
 }
 
